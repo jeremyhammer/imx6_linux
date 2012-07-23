@@ -97,6 +97,49 @@
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
+static iomux_v3_cfg_t mx6q_gpmi_nand[] __initdata = {
+	MX6Q_PAD_NANDF_CLE__RAWNAND_CLE,
+	MX6Q_PAD_NANDF_ALE__RAWNAND_ALE,
+	MX6Q_PAD_NANDF_CS0__RAWNAND_CE0N,
+	MX6Q_PAD_NANDF_CS1__RAWNAND_CE1N,
+	MX6Q_PAD_NANDF_CS2__RAWNAND_CE2N,
+	MX6Q_PAD_NANDF_CS3__RAWNAND_CE3N,
+	MX6Q_PAD_NANDF_RB0__RAWNAND_READY0,
+	MX6Q_PAD_SD4_DAT0__RAWNAND_DQS,
+	MX6Q_PAD_NANDF_D0__RAWNAND_D0,
+	MX6Q_PAD_NANDF_D1__RAWNAND_D1,
+	MX6Q_PAD_NANDF_D2__RAWNAND_D2,
+	MX6Q_PAD_NANDF_D3__RAWNAND_D3,
+	MX6Q_PAD_NANDF_D4__RAWNAND_D4,
+	MX6Q_PAD_NANDF_D5__RAWNAND_D5,
+	MX6Q_PAD_NANDF_D6__RAWNAND_D6,
+	MX6Q_PAD_NANDF_D7__RAWNAND_D7,
+	MX6Q_PAD_SD4_CMD__RAWNAND_RDN,
+	MX6Q_PAD_SD4_CLK__RAWNAND_WRN,
+	MX6Q_PAD_NANDF_WP_B__RAWNAND_RESETN,
+};
+
+static int __init gpmi_nand_platform_init(void)
+{
+	iomux_v3_cfg_t *nand_pads = NULL;
+	u32 nand_pads_cnt;
+
+	if (cpu_is_mx6q()) {
+		nand_pads = mx6q_gpmi_nand;
+		nand_pads_cnt = ARRAY_SIZE(mx6q_gpmi_nand);
+	}
+	BUG_ON(!nand_pads);
+	return mxc_iomux_v3_setup_multiple_pads(nand_pads, nand_pads_cnt);
+}
+
+static const struct gpmi_nand_platform_data
+mx6q_gpmi_nand_platform_data __initconst = {
+	.platform_init           = gpmi_nand_platform_init,
+	.min_prop_delay_in_ns    = 5,
+	.max_prop_delay_in_ns    = 9,
+	.max_chip_count          = 1,
+};
+
 void __init early_console_setup(unsigned long base, struct clk *clk);
 static struct clk *sata_clk;
 
@@ -153,10 +196,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_ENET_RX_ER__GPIO_1_24,		/* J9 - Microphone Detect */
 
 	/* GPIO2 */
-	MX6Q_PAD_NANDF_D1__GPIO_2_1,	/* J14 - Menu Button */
-	MX6Q_PAD_NANDF_D2__GPIO_2_2,	/* J14 - Back Button */
-	MX6Q_PAD_NANDF_D3__GPIO_2_3,	/* J14 - Search Button */
-	MX6Q_PAD_NANDF_D4__GPIO_2_4,	/* J14 - Home Button */
 	MX6Q_PAD_EIM_A22__GPIO_2_16,	/* J12 - Boot Mode Select */
 	MX6Q_PAD_EIM_A21__GPIO_2_17,	/* J12 - Boot Mode Select */
 	MX6Q_PAD_EIM_A20__GPIO_2_18,	/* J12 - Boot Mode Select */
@@ -250,7 +289,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
 	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* J7 - Display Connector GP */
 	MX6Q_PAD_GPIO_9__GPIO_1_9,		/* J7 - Display Connector GP */
-	MX6Q_PAD_NANDF_D0__GPIO_2_0,		/* J6 - LVDS Display contrast */
 
 
 	/* PWM1 */
@@ -291,14 +329,9 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	NEW_PAD_CTRL(MX6Q_PAD_SD3_DAT4__GPIO_7_1, MX6Q_SABRELITE_SD3_WP_PADCFG),
 
 	/* USDHC4 */
-	MX6Q_PAD_SD4_CLK__USDHC4_CLK_50MHZ,
-	MX6Q_PAD_SD4_CMD__USDHC4_CMD_50MHZ,
-	MX6Q_PAD_SD4_DAT0__USDHC4_DAT0_50MHZ,
 	MX6Q_PAD_SD4_DAT1__USDHC4_DAT1_50MHZ,
 	MX6Q_PAD_SD4_DAT2__USDHC4_DAT2_50MHZ,
 	MX6Q_PAD_SD4_DAT3__USDHC4_DAT3_50MHZ,
-	MX6Q_PAD_NANDF_D6__GPIO_2_6,		/* J20 - SD4_CD */
-	MX6Q_PAD_NANDF_D7__GPIO_2_7,		/* SD4_WP */
 };
 
 static iomux_v3_cfg_t mx6q_sabrelite_csi0_sensor_pads[] = {
@@ -322,8 +355,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_csi0_sensor_pads[] = {
 	MX6Q_PAD_GPIO_6__GPIO_1_6,		/* J5 - Camera GP */
 	MX6Q_PAD_GPIO_8__GPIO_1_8,		/* J5 - Camera Reset */
 	MX6Q_PAD_SD1_DAT0__GPIO_1_16,		/* J5 - Camera GP */
-	MX6Q_PAD_NANDF_D5__GPIO_2_5,		/* J16 - MIPI GP */
-	MX6Q_PAD_NANDF_WP_B__GPIO_6_9,		/* J16 - MIPI GP */
 };
 
 #define MX6Q_USDHC_PAD_SETTING(id, speed)	\
@@ -1134,6 +1165,8 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(0, NULL);
 	imx6q_add_dma();
+
+	imx6q_add_gpmi(&mx6q_gpmi_nand_platform_data);
 
 	imx6q_add_dvfs_core(&sabrelite_dvfscore_data);
 	mx6_cpu_regulator_init();
