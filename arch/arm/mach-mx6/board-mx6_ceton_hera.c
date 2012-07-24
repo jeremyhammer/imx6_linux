@@ -1080,6 +1080,17 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 	.pixel_clk = "emi_clk",
 };
 
+#define SABRELITE_PCIE_PWR_EN	IMX_GPIO_NR(3, 19)
+#define SABRELITE_PCIE_RST_B_REVB	IMX_GPIO_NR(7, 12)
+#define SABRELITE_PCIE_WAKE_B	IMX_GPIO_NR(5, 20)
+#define SABRELITE_PCIE_DIS_B	IMX_GPIO_NR(4, 14)
+static const struct imx_pcie_platform_data mx6_sabrelite_pcie_data __initconst = {
+	.pcie_pwr_en	= SABRELITE_PCIE_PWR_EN,
+	.pcie_rst	= SABRELITE_PCIE_RST_B_REVB,
+	.pcie_wake_up	= SABRELITE_PCIE_WAKE_B,
+	.pcie_dis	= SABRELITE_PCIE_DIS_B,
+};
+
 /*!
  * Board specific initialization.
  */
@@ -1196,6 +1207,8 @@ static void __init mx6_sabrelite_board_init(void)
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
 	imx6q_add_busfreq();
+
+	imx6q_add_pcie(&mx6_sabrelite_pcie_data);
 }
 
 extern void __iomem *twd_base;
