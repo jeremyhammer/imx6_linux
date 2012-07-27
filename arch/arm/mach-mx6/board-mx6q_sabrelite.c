@@ -97,49 +97,6 @@
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
-static iomux_v3_cfg_t mx6q_gpmi_nand[] __initdata = {
-	MX6Q_PAD_NANDF_CLE__RAWNAND_CLE,
-	MX6Q_PAD_NANDF_ALE__RAWNAND_ALE,
-	MX6Q_PAD_NANDF_CS0__RAWNAND_CE0N,
-	MX6Q_PAD_NANDF_CS1__RAWNAND_CE1N,
-	MX6Q_PAD_NANDF_CS2__RAWNAND_CE2N,
-	MX6Q_PAD_NANDF_CS3__RAWNAND_CE3N,
-	MX6Q_PAD_NANDF_RB0__RAWNAND_READY0,
-	MX6Q_PAD_SD4_DAT0__RAWNAND_DQS,
-	MX6Q_PAD_NANDF_D0__RAWNAND_D0,
-	MX6Q_PAD_NANDF_D1__RAWNAND_D1,
-	MX6Q_PAD_NANDF_D2__RAWNAND_D2,
-	MX6Q_PAD_NANDF_D3__RAWNAND_D3,
-	MX6Q_PAD_NANDF_D4__RAWNAND_D4,
-	MX6Q_PAD_NANDF_D5__RAWNAND_D5,
-	MX6Q_PAD_NANDF_D6__RAWNAND_D6,
-	MX6Q_PAD_NANDF_D7__RAWNAND_D7,
-	MX6Q_PAD_SD4_CMD__RAWNAND_RDN,
-	MX6Q_PAD_SD4_CLK__RAWNAND_WRN,
-	MX6Q_PAD_NANDF_WP_B__RAWNAND_RESETN,
-};
-
-static int __init gpmi_nand_platform_init(void)
-{
-	iomux_v3_cfg_t *nand_pads = NULL;
-	u32 nand_pads_cnt;
-
-	if (cpu_is_mx6q()) {
-		nand_pads = mx6q_gpmi_nand;
-		nand_pads_cnt = ARRAY_SIZE(mx6q_gpmi_nand);
-	}
-	BUG_ON(!nand_pads);
-	return mxc_iomux_v3_setup_multiple_pads(nand_pads, nand_pads_cnt);
-}
-
-static const struct gpmi_nand_platform_data
-mx6q_gpmi_nand_platform_data __initconst = {
-	.platform_init           = gpmi_nand_platform_init,
-	.min_prop_delay_in_ns    = 5,
-	.max_prop_delay_in_ns    = 9,
-	.max_chip_count          = 1,
-};
-
 void __init early_console_setup(unsigned long base, struct clk *clk);
 static struct clk *sata_clk;
 
@@ -164,7 +121,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_GPIO_4__GPIO_1_4,		/* Enable */
 
 	/* CCM  */
-    MX6Q_PAD_GPIO_0__CCM_CLKO,              /* SGTL500 sys_mclk */
+	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* SGTL500 sys_mclk */
 	MX6Q_PAD_GPIO_3__CCM_CLKO2,		/* J5 - Camera MCLK */
 
 	/* ECSPI1 */
@@ -196,6 +153,10 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_ENET_RX_ER__GPIO_1_24,		/* J9 - Microphone Detect */
 
 	/* GPIO2 */
+	MX6Q_PAD_NANDF_D1__GPIO_2_1,	/* J14 - Menu Button */
+	MX6Q_PAD_NANDF_D2__GPIO_2_2,	/* J14 - Back Button */
+	MX6Q_PAD_NANDF_D3__GPIO_2_3,	/* J14 - Search Button */
+	MX6Q_PAD_NANDF_D4__GPIO_2_4,	/* J14 - Home Button */
 	MX6Q_PAD_EIM_A22__GPIO_2_16,	/* J12 - Boot Mode Select */
 	MX6Q_PAD_EIM_A21__GPIO_2_17,	/* J12 - Boot Mode Select */
 	MX6Q_PAD_EIM_A20__GPIO_2_18,	/* J12 - Boot Mode Select */
@@ -241,13 +202,21 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_GPIO_17__GPIO_7_12,	/* USB Hub Reset */
 	MX6Q_PAD_GPIO_18__GPIO_7_13,	/* J14 - Volume Up */
 
-    /* I2C1, SGTL5000 */
-    MX6Q_PAD_EIM_D21__I2C1_SCL,     /* GPIO3[21] */
-    MX6Q_PAD_EIM_D28__I2C1_SDA,     /* GPIO3[28] */
+	/* I2C1, SGTL5000 */
+	MX6Q_PAD_EIM_D21__I2C1_SCL,	/* GPIO3[21] */
+	MX6Q_PAD_EIM_D28__I2C1_SDA,	/* GPIO3[28] */
 
-    /* HDMI I2C */
-    MX6Q_PAD_KEY_COL3__I2C2_SCL,    /* GPIO4[12] */
-    MX6Q_PAD_KEY_ROW3__I2C2_SDA,    /* GPIO4[13] */
+	/* I2C2 Camera, MIPI */
+	MX6Q_PAD_KEY_COL3__I2C2_SCL,	/* GPIO4[12] */
+	MX6Q_PAD_KEY_ROW3__I2C2_SDA,	/* GPIO4[13] */
+
+	/* I2C3 */
+	MX6Q_PAD_GPIO_5__I2C3_SCL,	/* GPIO1[5] - J7 - Display card */
+#ifdef CONFIG_FEC_1588
+	MX6Q_PAD_GPIO_16__ENET_ANATOP_ETHERNET_REF_OUT,
+#else
+	MX6Q_PAD_GPIO_16__I2C3_SDA,	/* GPIO7[11] - J15 - RGB connector */
+#endif
 
 	/* DISPLAY */
 	MX6Q_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,
@@ -281,6 +250,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
 	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* J7 - Display Connector GP */
 	MX6Q_PAD_GPIO_9__GPIO_1_9,		/* J7 - Display Connector GP */
+	MX6Q_PAD_NANDF_D0__GPIO_2_0,		/* J6 - LVDS Display contrast */
 
 
 	/* PWM1 */
@@ -321,9 +291,14 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	NEW_PAD_CTRL(MX6Q_PAD_SD3_DAT4__GPIO_7_1, MX6Q_SABRELITE_SD3_WP_PADCFG),
 
 	/* USDHC4 */
+	MX6Q_PAD_SD4_CLK__USDHC4_CLK_50MHZ,
+	MX6Q_PAD_SD4_CMD__USDHC4_CMD_50MHZ,
+	MX6Q_PAD_SD4_DAT0__USDHC4_DAT0_50MHZ,
 	MX6Q_PAD_SD4_DAT1__USDHC4_DAT1_50MHZ,
 	MX6Q_PAD_SD4_DAT2__USDHC4_DAT2_50MHZ,
 	MX6Q_PAD_SD4_DAT3__USDHC4_DAT3_50MHZ,
+	MX6Q_PAD_NANDF_D6__GPIO_2_6,		/* J20 - SD4_CD */
+	MX6Q_PAD_NANDF_D7__GPIO_2_7,		/* SD4_WP */
 };
 
 static iomux_v3_cfg_t mx6q_sabrelite_csi0_sensor_pads[] = {
@@ -347,6 +322,8 @@ static iomux_v3_cfg_t mx6q_sabrelite_csi0_sensor_pads[] = {
 	MX6Q_PAD_GPIO_6__GPIO_1_6,		/* J5 - Camera GP */
 	MX6Q_PAD_GPIO_8__GPIO_1_8,		/* J5 - Camera Reset */
 	MX6Q_PAD_SD1_DAT0__GPIO_1_16,		/* J5 - Camera GP */
+	MX6Q_PAD_NANDF_D5__GPIO_2_5,		/* J16 - MIPI GP */
+	MX6Q_PAD_NANDF_WP_B__GPIO_6_9,		/* J16 - MIPI GP */
 };
 
 #define MX6Q_USDHC_PAD_SETTING(id, speed)	\
@@ -528,58 +505,57 @@ static struct mxc_audio_platform_data mx6_sabrelite_audio_data;
 
 static int mx6_sabrelite_sgtl5000_init(void)
 {
-       struct clk *clko;
-       struct clk *new_parent;
-       int rate;
+	struct clk *clko;
+	struct clk *new_parent;
+	int rate;
 
-       clko = clk_get(NULL, "clko_clk");
-       if (IS_ERR(clko)) {
-               pr_err("can't get CLKO clock.\n");
-               return PTR_ERR(clko);
-       }
-       new_parent = clk_get(NULL, "ahb");
-       if (!IS_ERR(new_parent)) {
-               clk_set_parent(clko, new_parent);
-               clk_put(new_parent);
-       }
-       rate = clk_round_rate(clko, 16000000);
-       if (rate < 8000000 || rate > 27000000) {
-               pr_err("Error:SGTL5000 mclk freq %d out of range!\n", rate);
-               clk_put(clko);
-               return -1;
-       }
+	clko = clk_get(NULL, "clko_clk");
+	if (IS_ERR(clko)) {
+		pr_err("can't get CLKO clock.\n");
+		return PTR_ERR(clko);
+	}
+	new_parent = clk_get(NULL, "ahb");
+	if (!IS_ERR(new_parent)) {
+		clk_set_parent(clko, new_parent);
+		clk_put(new_parent);
+	}
+	rate = clk_round_rate(clko, 16000000);
+	if (rate < 8000000 || rate > 27000000) {
+		pr_err("Error:SGTL5000 mclk freq %d out of range!\n", rate);
+		clk_put(clko);
+		return -1;
+	}
 
-       mx6_sabrelite_audio_data.sysclk = rate;
-       clk_set_rate(clko, rate);
-       clk_enable(clko);
-       return 0;
+	mx6_sabrelite_audio_data.sysclk = rate;
+	clk_set_rate(clko, rate);
+	clk_enable(clko);
+	return 0;
 }
-
 
 static struct imx_ssi_platform_data mx6_sabrelite_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
 static struct mxc_audio_platform_data mx6_sabrelite_audio_data = {
-       .ssi_num = 1,
-       .src_port = 2,
-       .ext_port = 4,
-       .init = mx6_sabrelite_sgtl5000_init,
-       .hp_gpio = -1,
+	.ssi_num = 1,
+	.src_port = 2,
+	.ext_port = 4,
+	.init = mx6_sabrelite_sgtl5000_init,
+	.hp_gpio = -1,
 };
 
 static struct platform_device mx6_sabrelite_audio_device = {
-       .name = "imx-sgtl5000",
-};
-
-static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
-       {
-               I2C_BOARD_INFO("sgtl5000", 0x0a),
-       },
+	.name = "imx-sgtl5000",
 };
 
 static struct imxi2c_platform_data mx6q_sabrelite_i2c_data = {
-       .bitrate = 100000,
+	.bitrate = 100000,
+};
+
+static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("sgtl5000", 0x0a),
+	},
 };
 
 
@@ -630,6 +606,13 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ov5642", 0x3c),
 		.platform_data = (void *)&camera_data,
+	},
+};
+
+static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("egalax_ts", 0x4),
+		.irq = gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
 	},
 };
 
@@ -933,92 +916,91 @@ static struct platform_device sabrelite_vmmc_reg_devices = {
 #ifdef CONFIG_SND_SOC_SGTL5000
 
 static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vdda = {
-       .supply = "VDDA",
-       .dev_name = "0-000a",
+	.supply = "VDDA",
+	.dev_name = "0-000a",
 };
 
 static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vddio = {
-       .supply = "VDDIO",
-       .dev_name = "0-000a",
+	.supply = "VDDIO",
+	.dev_name = "0-000a",
 };
 
 static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vddd = {
-       .supply = "VDDD",
-       .dev_name = "0-000a",
+	.supply = "VDDD",
+	.dev_name = "0-000a",
 };
 
 static struct regulator_init_data sgtl5000_sabrelite_vdda_reg_initdata = {
-       .num_consumer_supplies = 1,
-       .consumer_supplies = &sgtl5000_sabrelite_consumer_vdda,
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &sgtl5000_sabrelite_consumer_vdda,
 };
 
 static struct regulator_init_data sgtl5000_sabrelite_vddio_reg_initdata = {
-       .num_consumer_supplies = 1,
-       .consumer_supplies = &sgtl5000_sabrelite_consumer_vddio,
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &sgtl5000_sabrelite_consumer_vddio,
 };
 
 static struct regulator_init_data sgtl5000_sabrelite_vddd_reg_initdata = {
-       .num_consumer_supplies = 1,
-       .consumer_supplies = &sgtl5000_sabrelite_consumer_vddd,
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &sgtl5000_sabrelite_consumer_vddd,
 };
 
 static struct fixed_voltage_config sgtl5000_sabrelite_vdda_reg_config = {
-       .supply_name            = "VDDA",
-       .microvolts             = 2500000,
-       .gpio                   = -1,
-       .init_data              = &sgtl5000_sabrelite_vdda_reg_initdata,
+	.supply_name		= "VDDA",
+	.microvolts		= 2500000,
+	.gpio			= -1,
+	.init_data		= &sgtl5000_sabrelite_vdda_reg_initdata,
 };
 
 static struct fixed_voltage_config sgtl5000_sabrelite_vddio_reg_config = {
-       .supply_name            = "VDDIO",
-       .microvolts             = 3300000,
-       .gpio                   = -1,
-       .init_data              = &sgtl5000_sabrelite_vddio_reg_initdata,
+	.supply_name		= "VDDIO",
+	.microvolts		= 3300000,
+	.gpio			= -1,
+	.init_data		= &sgtl5000_sabrelite_vddio_reg_initdata,
 };
 
 static struct fixed_voltage_config sgtl5000_sabrelite_vddd_reg_config = {
-       .supply_name            = "VDDD",
-       .microvolts             = 0,
-       .gpio                   = -1,
-       .init_data              = &sgtl5000_sabrelite_vddd_reg_initdata,
+	.supply_name		= "VDDD",
+	.microvolts		= 0,
+	.gpio			= -1,
+	.init_data		= &sgtl5000_sabrelite_vddd_reg_initdata,
 };
 
 static struct platform_device sgtl5000_sabrelite_vdda_reg_devices = {
-       .name   = "reg-fixed-voltage",
-       .id     = 0,
-       .dev    = {
-               .platform_data = &sgtl5000_sabrelite_vdda_reg_config,
-       },
+	.name	= "reg-fixed-voltage",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &sgtl5000_sabrelite_vdda_reg_config,
+	},
 };
 
 static struct platform_device sgtl5000_sabrelite_vddio_reg_devices = {
-       .name   = "reg-fixed-voltage",
-       .id     = 1,
-       .dev    = {
-               .platform_data = &sgtl5000_sabrelite_vddio_reg_config,
-       },
+	.name	= "reg-fixed-voltage",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &sgtl5000_sabrelite_vddio_reg_config,
+	},
 };
 
 static struct platform_device sgtl5000_sabrelite_vddd_reg_devices = {
-       .name   = "reg-fixed-voltage",
-       .id     = 2,
-       .dev    = {
-               .platform_data = &sgtl5000_sabrelite_vddd_reg_config,
-       },
+	.name	= "reg-fixed-voltage",
+	.id	= 2,
+	.dev	= {
+		.platform_data = &sgtl5000_sabrelite_vddd_reg_config,
+	},
 };
 
 #endif /* CONFIG_SND_SOC_SGTL5000 */
 
-
 static int imx6q_init_audio(void)
 {
-    mxc_register_device(&mx6_sabrelite_audio_device,
-                                &mx6_sabrelite_audio_data);
+	mxc_register_device(&mx6_sabrelite_audio_device,
+			    &mx6_sabrelite_audio_data);
 	imx6q_add_imx_ssi(1, &mx6_sabrelite_ssi_pdata);
 #ifdef CONFIG_SND_SOC_SGTL5000
-       platform_device_register(&sgtl5000_sabrelite_vdda_reg_devices);
-       platform_device_register(&sgtl5000_sabrelite_vddio_reg_devices);
-       platform_device_register(&sgtl5000_sabrelite_vddd_reg_devices);
+	platform_device_register(&sgtl5000_sabrelite_vdda_reg_devices);
+	platform_device_register(&sgtl5000_sabrelite_vddio_reg_devices);
+	platform_device_register(&sgtl5000_sabrelite_vddd_reg_devices);
 #endif
 	return 0;
 }
@@ -1058,15 +1040,13 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 {
 }
 
-#define SABRELITE_PCIE_PWR_EN	IMX_GPIO_NR(3, 19)
-#define SABRELITE_PCIE_RST_B_REVB	IMX_GPIO_NR(7, 11)
-#define SABRELITE_PCIE_WAKE_B	IMX_GPIO_NR(5, 20)
-#define SABRELITE_PCIE_DIS_B	IMX_GPIO_NR(4, 14)
-static const struct imx_pcie_platform_data mx6_sabrelite_pcie_data __initconst = {
-	.pcie_pwr_en	= SABRELITE_PCIE_PWR_EN,
-	.pcie_rst	= SABRELITE_PCIE_RST_B_REVB,
-	.pcie_wake_up	= SABRELITE_PCIE_WAKE_B,
-	.pcie_dis	= SABRELITE_PCIE_DIS_B,
+static struct mipi_csi2_platform_data mipi_csi2_pdata = {
+	.ipu_id	 = 0,
+	.csi_id = 0,
+	.v_channel = 0,
+	.lanes = 2,
+	.dphy_clk = "mipi_pllref_clk",
+	.pixel_clk = "emi_clk",
 };
 
 /*!
@@ -1107,14 +1087,18 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_v4l2_output(0);
 	imx6q_add_v4l2_capture(0);
+	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
 	imx6q_add_imx_snvs_rtc();
 
-    imx6q_add_imx_i2c(0, &mx6q_sabrelite_i2c_data);
-    imx6q_add_imx_i2c(1, &mx6q_sabrelite_i2c_data);
-    i2c_register_board_info(0, mxc_i2c0_board_info,
-                    ARRAY_SIZE(mxc_i2c0_board_info));
-    i2c_register_board_info(1, mxc_i2c1_board_info,
-                    ARRAY_SIZE(mxc_i2c1_board_info));
+	imx6q_add_imx_i2c(0, &mx6q_sabrelite_i2c_data);
+	imx6q_add_imx_i2c(1, &mx6q_sabrelite_i2c_data);
+	imx6q_add_imx_i2c(2, &mx6q_sabrelite_i2c_data);
+	i2c_register_board_info(0, mxc_i2c0_board_info,
+			ARRAY_SIZE(mxc_i2c0_board_info));
+	i2c_register_board_info(1, mxc_i2c1_board_info,
+			ARRAY_SIZE(mxc_i2c1_board_info));
+	i2c_register_board_info(2, mxc_i2c2_board_info,
+			ARRAY_SIZE(mxc_i2c2_board_info));
 
 	/* SPI */
 	imx6q_add_ecspi(0, &mx6q_sabrelite_spi_data);
@@ -1151,8 +1135,6 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_imx2_wdt(0, NULL);
 	imx6q_add_dma();
 
-	imx6q_add_gpmi(&mx6q_gpmi_nand_platform_data);
-
 	imx6q_add_dvfs_core(&sabrelite_dvfscore_data);
 	mx6_cpu_regulator_init();
 
@@ -1181,8 +1163,6 @@ static void __init mx6_sabrelite_board_init(void)
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
 	imx6q_add_busfreq();
-
-	imx6q_add_pcie(&mx6_sabrelite_pcie_data);
 }
 
 extern void __iomem *twd_base;
