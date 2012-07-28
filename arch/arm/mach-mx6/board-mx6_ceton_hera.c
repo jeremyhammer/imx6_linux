@@ -84,10 +84,7 @@
 #define MX6Q_SABRELITE_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
 #define MX6Q_SABRELITE_CAN1_STBY	IMX_GPIO_NR(1, 2)
 #define MX6Q_SABRELITE_CAN1_EN		IMX_GPIO_NR(1, 4)
-#define MX6Q_SABRELITE_MENU_KEY		IMX_GPIO_NR(2, 1)
-#define MX6Q_SABRELITE_BACK_KEY		IMX_GPIO_NR(2, 2)
 #define MX6Q_SABRELITE_ONOFF_KEY	IMX_GPIO_NR(2, 3)
-#define MX6Q_SABRELITE_HOME_KEY		IMX_GPIO_NR(2, 4)
 #define MX6Q_SABRELITE_VOL_UP_KEY	IMX_GPIO_NR(7, 13)
 #define MX6Q_SABRELITE_VOL_DOWN_KEY	IMX_GPIO_NR(4, 5)
 #define MX6Q_SABRELITE_CSI0_RST		IMX_GPIO_NR(1, 8)
@@ -96,6 +93,49 @@
 #define MX6Q_SABRELITE_SD3_WP_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+
+static iomux_v3_cfg_t mx6q_gpmi_nand[] __initdata = {
+	MX6Q_PAD_NANDF_CLE__RAWNAND_CLE,
+	MX6Q_PAD_NANDF_ALE__RAWNAND_ALE,
+	MX6Q_PAD_NANDF_CS0__RAWNAND_CE0N,
+	MX6Q_PAD_NANDF_CS1__RAWNAND_CE1N,
+	MX6Q_PAD_NANDF_CS2__RAWNAND_CE2N,
+	MX6Q_PAD_NANDF_CS3__RAWNAND_CE3N,
+	MX6Q_PAD_NANDF_RB0__RAWNAND_READY0,
+	MX6Q_PAD_SD4_DAT0__RAWNAND_DQS,
+	MX6Q_PAD_NANDF_D0__RAWNAND_D0,
+	MX6Q_PAD_NANDF_D1__RAWNAND_D1,
+	MX6Q_PAD_NANDF_D2__RAWNAND_D2,
+	MX6Q_PAD_NANDF_D3__RAWNAND_D3,
+	MX6Q_PAD_NANDF_D4__RAWNAND_D4,
+	MX6Q_PAD_NANDF_D5__RAWNAND_D5,
+	MX6Q_PAD_NANDF_D6__RAWNAND_D6,
+	MX6Q_PAD_NANDF_D7__RAWNAND_D7,
+	MX6Q_PAD_SD4_CMD__RAWNAND_RDN,
+	MX6Q_PAD_SD4_CLK__RAWNAND_WRN,
+	MX6Q_PAD_NANDF_WP_B__RAWNAND_RESETN,
+};
+
+static int __init gpmi_nand_platform_init(void)
+{
+	iomux_v3_cfg_t *nand_pads = NULL;
+	u32 nand_pads_cnt;
+
+	if (cpu_is_mx6q()) {
+		nand_pads = mx6q_gpmi_nand;
+		nand_pads_cnt = ARRAY_SIZE(mx6q_gpmi_nand);
+	}
+	BUG_ON(!nand_pads);
+	return mxc_iomux_v3_setup_multiple_pads(nand_pads, nand_pads_cnt);
+}
+
+static const struct gpmi_nand_platform_data
+mx6q_gpmi_nand_platform_data __initconst = {
+	.platform_init           = gpmi_nand_platform_init,
+	.min_prop_delay_in_ns    = 5,
+	.max_prop_delay_in_ns    = 9,
+	.max_chip_count          = 1,
+};
 
 void __init early_console_setup(unsigned long base, struct clk *clk);
 static struct clk *sata_clk;
@@ -153,10 +193,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_ENET_RX_ER__GPIO_1_24,		/* J9 - Microphone Detect */
 
 	/* GPIO2 */
-	MX6Q_PAD_NANDF_D1__GPIO_2_1,	/* J14 - Menu Button */
-	MX6Q_PAD_NANDF_D2__GPIO_2_2,	/* J14 - Back Button */
-	MX6Q_PAD_NANDF_D3__GPIO_2_3,	/* J14 - Search Button */
-	MX6Q_PAD_NANDF_D4__GPIO_2_4,	/* J14 - Home Button */
 	MX6Q_PAD_EIM_A22__GPIO_2_16,	/* J12 - Boot Mode Select */
 	MX6Q_PAD_EIM_A21__GPIO_2_17,	/* J12 - Boot Mode Select */
 	MX6Q_PAD_EIM_A20__GPIO_2_18,	/* J12 - Boot Mode Select */
@@ -188,6 +224,8 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_EIM_DA14__GPIO_3_14,	/* J12 - Boot Mode Select */
 	MX6Q_PAD_EIM_DA15__GPIO_3_15,	/* J12 - Boot Mode Select */
 
+    MX6Q_PAD_GPIO_16__GPIO_7_11,     /* GPIO7[11] - PCIe rstn */
+
 	/* GPIO4 */
 	MX6Q_PAD_GPIO_19__GPIO_4_5,	/* J14 - Volume Down */
 
@@ -206,17 +244,9 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_EIM_D21__I2C1_SCL,	/* GPIO3[21] */
 	MX6Q_PAD_EIM_D28__I2C1_SDA,	/* GPIO3[28] */
 
-	/* I2C2 Camera, MIPI */
+	/* I2C2 Camera, MIPI, HDMI */
 	MX6Q_PAD_KEY_COL3__I2C2_SCL,	/* GPIO4[12] */
 	MX6Q_PAD_KEY_ROW3__I2C2_SDA,	/* GPIO4[13] */
-
-	/* I2C3 */
-	MX6Q_PAD_GPIO_5__I2C3_SCL,	/* GPIO1[5] - J7 - Display card */
-#ifdef CONFIG_FEC_1588
-	MX6Q_PAD_GPIO_16__ENET_ANATOP_ETHERNET_REF_OUT,
-#else
-	MX6Q_PAD_GPIO_16__I2C3_SDA,	/* GPIO7[11] - J15 - RGB connector */
-#endif
 
 	/* DISPLAY */
 	MX6Q_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,
@@ -250,8 +280,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
 	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* J7 - Display Connector GP */
 	MX6Q_PAD_GPIO_9__GPIO_1_9,		/* J7 - Display Connector GP */
-	MX6Q_PAD_NANDF_D0__GPIO_2_0,		/* J6 - LVDS Display contrast */
-
 
 	/* PWM1 */
 	MX6Q_PAD_SD1_DAT3__PWM1_PWMO,		/* GPIO1[21] */
@@ -289,41 +317,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_SD3_DAT3__USDHC3_DAT3_50MHZ,
 	MX6Q_PAD_SD3_DAT5__GPIO_7_0,		/* J18 - SD3_CD */
 	NEW_PAD_CTRL(MX6Q_PAD_SD3_DAT4__GPIO_7_1, MX6Q_SABRELITE_SD3_WP_PADCFG),
-
-	/* USDHC4 */
-	MX6Q_PAD_SD4_CLK__USDHC4_CLK_50MHZ,
-	MX6Q_PAD_SD4_CMD__USDHC4_CMD_50MHZ,
-	MX6Q_PAD_SD4_DAT0__USDHC4_DAT0_50MHZ,
-	MX6Q_PAD_SD4_DAT1__USDHC4_DAT1_50MHZ,
-	MX6Q_PAD_SD4_DAT2__USDHC4_DAT2_50MHZ,
-	MX6Q_PAD_SD4_DAT3__USDHC4_DAT3_50MHZ,
-	MX6Q_PAD_NANDF_D6__GPIO_2_6,		/* J20 - SD4_CD */
-	MX6Q_PAD_NANDF_D7__GPIO_2_7,		/* SD4_WP */
-};
-
-static iomux_v3_cfg_t mx6q_sabrelite_csi0_sensor_pads[] = {
-	/* IPU1 Camera */
-	MX6Q_PAD_CSI0_DAT8__IPU1_CSI0_D_8,
-	MX6Q_PAD_CSI0_DAT9__IPU1_CSI0_D_9,
-	MX6Q_PAD_CSI0_DAT10__IPU1_CSI0_D_10,
-	MX6Q_PAD_CSI0_DAT11__IPU1_CSI0_D_11,
-	MX6Q_PAD_CSI0_DAT12__IPU1_CSI0_D_12,
-	MX6Q_PAD_CSI0_DAT13__IPU1_CSI0_D_13,
-	MX6Q_PAD_CSI0_DAT14__IPU1_CSI0_D_14,
-	MX6Q_PAD_CSI0_DAT15__IPU1_CSI0_D_15,
-	MX6Q_PAD_CSI0_DAT16__IPU1_CSI0_D_16,
-	MX6Q_PAD_CSI0_DAT17__IPU1_CSI0_D_17,
-	MX6Q_PAD_CSI0_DAT18__IPU1_CSI0_D_18,
-	MX6Q_PAD_CSI0_DAT19__IPU1_CSI0_D_19,
-	MX6Q_PAD_CSI0_DATA_EN__IPU1_CSI0_DATA_EN,
-	MX6Q_PAD_CSI0_MCLK__IPU1_CSI0_HSYNC,
-	MX6Q_PAD_CSI0_PIXCLK__IPU1_CSI0_PIXCLK,
-	MX6Q_PAD_CSI0_VSYNC__IPU1_CSI0_VSYNC,
-	MX6Q_PAD_GPIO_6__GPIO_1_6,		/* J5 - Camera GP */
-	MX6Q_PAD_GPIO_8__GPIO_1_8,		/* J5 - Camera Reset */
-	MX6Q_PAD_SD1_DAT0__GPIO_1_16,		/* J5 - Camera GP */
-	MX6Q_PAD_NANDF_D5__GPIO_2_5,		/* J16 - MIPI GP */
-	MX6Q_PAD_NANDF_WP_B__GPIO_6_9,		/* J16 - MIPI GP */
 };
 
 #define MX6Q_USDHC_PAD_SETTING(id, speed)	\
@@ -339,9 +332,6 @@ mx6q_sd##id##_##speed##mhz[] = {		\
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 50);
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 100);
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 200);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 50);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 100);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 200);
 
 enum sd_pad_mode {
 	SD_PAD_MODE_LOW_SPEED,
@@ -377,46 +367,11 @@ static int plt_sd3_pad_change(int clock)
 	}
 }
 
-static int plt_sd4_pad_change(int clock)
-{
-	static enum sd_pad_mode pad_mode = SD_PAD_MODE_LOW_SPEED;
-
-	if (clock > 100000000) {
-		if (pad_mode == SD_PAD_MODE_HIGH_SPEED)
-			return 0;
-
-		pad_mode = SD_PAD_MODE_HIGH_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd4_200mhz,
-					ARRAY_SIZE(mx6q_sd4_200mhz));
-	} else if (clock > 52000000) {
-		if (pad_mode == SD_PAD_MODE_MED_SPEED)
-			return 0;
-
-		pad_mode = SD_PAD_MODE_MED_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd4_100mhz,
-					ARRAY_SIZE(mx6q_sd4_100mhz));
-	} else {
-		if (pad_mode == SD_PAD_MODE_LOW_SPEED)
-			return 0;
-
-		pad_mode = SD_PAD_MODE_LOW_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd4_50mhz,
-					ARRAY_SIZE(mx6q_sd4_50mhz));
-	}
-}
-
 static const struct esdhc_platform_data mx6q_sabrelite_sd3_data __initconst = {
 	.cd_gpio = MX6Q_SABRELITE_SD3_CD,
 	.wp_gpio = MX6Q_SABRELITE_SD3_WP,
 	.keep_power_at_suspend = 1,
 	.platform_pad_change = plt_sd3_pad_change,
-};
-
-static const struct esdhc_platform_data mx6q_sabrelite_sd4_data __initconst = {
-	.cd_gpio = MX6Q_SABRELITE_SD4_CD,
-	.wp_gpio = MX6Q_SABRELITE_SD4_WP,
-	.keep_power_at_suspend = 1,
-	.platform_pad_change = plt_sd4_pad_change,
 };
 
 static const struct anatop_thermal_platform_data
@@ -558,61 +513,9 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	},
 };
 
-
-static void mx6q_csi0_io_init(void)
-{
-	mxc_iomux_v3_setup_multiple_pads(mx6q_sabrelite_csi0_sensor_pads,
-			ARRAY_SIZE(mx6q_sabrelite_csi0_sensor_pads));
-
-	/* Camera power down */
-	gpio_request(MX6Q_SABRELITE_CSI0_PWN, "cam-pwdn");
-	gpio_direction_output(MX6Q_SABRELITE_CSI0_PWN, 1);
-	msleep(1);
-	gpio_set_value(MX6Q_SABRELITE_CSI0_PWN, 0);
-
-	/* Camera reset */
-	gpio_request(MX6Q_SABRELITE_CSI0_RST, "cam-reset");
-	gpio_direction_output(MX6Q_SABRELITE_CSI0_RST, 1);
-
-	gpio_set_value(MX6Q_SABRELITE_CSI0_RST, 0);
-	msleep(1);
-	gpio_set_value(MX6Q_SABRELITE_CSI0_RST, 1);
-
-	/* For MX6Q GPR1 bit19 and bit20 meaning:
-	 * Bit19:       0 - Enable mipi to IPU1 CSI0
-	 *                      virtual channel is fixed to 0
-	 *              1 - Enable parallel interface to IPU1 CSI0
-	 * Bit20:       0 - Enable mipi to IPU2 CSI1
-	 *                      virtual channel is fixed to 3
-	 *              1 - Enable parallel interface to IPU2 CSI1
-	 * IPU1 CSI1 directly connect to mipi csi2,
-	 *      virtual channel is fixed to 1
-	 * IPU2 CSI0 directly connect to mipi csi2,
-	 *      virtual channel is fixed to 2
-	 */
-	mxc_iomux_set_gpr_register(1, 19, 1, 1);
-}
-
-static struct fsl_mxc_camera_platform_data camera_data = {
-	.mclk = 24000000,
-	.csi = 0,
-	.io_init = mx6q_csi0_io_init,
-};
-
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
-	},
-	{
-		I2C_BOARD_INFO("ov5642", 0x3c),
-		.platform_data = (void *)&camera_data,
-	},
-};
-
-static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("egalax_ts", 0x4),
-		.irq = gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
 	},
 };
 
@@ -859,9 +762,6 @@ static const struct pm_platform_data mx6q_sabrelite_pm_data __initconst = {
 
 static struct gpio_keys_button sabrelite_buttons[] = {
 	GPIO_BUTTON(MX6Q_SABRELITE_ONOFF_KEY, KEY_POWER, 1, "key-power", 1),
-	GPIO_BUTTON(MX6Q_SABRELITE_MENU_KEY, KEY_MENU, 1, "key-memu", 0),
-	GPIO_BUTTON(MX6Q_SABRELITE_HOME_KEY, KEY_HOME, 1, "key-home", 0),
-	GPIO_BUTTON(MX6Q_SABRELITE_BACK_KEY, KEY_BACK, 1, "key-back", 0),
 	GPIO_BUTTON(MX6Q_SABRELITE_VOL_UP_KEY, KEY_VOLUMEUP, 1, "volume-up", 0),
 	GPIO_BUTTON(MX6Q_SABRELITE_VOL_DOWN_KEY, KEY_VOLUMEDOWN, 1, "volume-down", 0),
 };
@@ -1049,10 +949,21 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 	.pixel_clk = "emi_clk",
 };
 
+#define CETON_HERA_PCIE_PWR_EN	IMX_GPIO_NR(3, 19)
+#define CETON_HERA_PCIE_RST_B_REVB	IMX_GPIO_NR(7, 11)
+#define CETON_HERA_PCIE_WAKE_B	IMX_GPIO_NR(5, 20)
+#define CETON_HERA_PCIE_DIS_B	IMX_GPIO_NR(4, 14)
+static const struct imx_pcie_platform_data mx6_ceton_hera_pcie_data __initconst = {
+	.pcie_pwr_en	= CETON_HERA_PCIE_PWR_EN,
+	.pcie_rst	= CETON_HERA_PCIE_RST_B_REVB,
+	.pcie_wake_up	= CETON_HERA_PCIE_WAKE_B,
+	.pcie_dis	= CETON_HERA_PCIE_DIS_B,
+};
+
 /*!
  * Board specific initialization.
  */
-static void __init mx6_sabrelite_board_init(void)
+static void __init mx6_ceton_hera_board_init(void)
 {
 	int i;
 	int ret;
@@ -1097,8 +1008,6 @@ static void __init mx6_sabrelite_board_init(void)
 			ARRAY_SIZE(mxc_i2c0_board_info));
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 			ARRAY_SIZE(mxc_i2c1_board_info));
-	i2c_register_board_info(2, mxc_i2c2_board_info,
-			ARRAY_SIZE(mxc_i2c2_board_info));
 
 	/* SPI */
 	imx6q_add_ecspi(0, &mx6q_sabrelite_spi_data);
@@ -1109,7 +1018,6 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_anatop_thermal_imx(1, &mx6q_sabrelite_anatop_thermal_data);
 	imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &mx6q_sabrelite_pm_data);
-	imx6q_add_sdhci_usdhc_imx(3, &mx6q_sabrelite_sd4_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6q_sabrelite_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 	imx6q_sabrelite_init_usb();
@@ -1134,6 +1042,8 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(0, NULL);
 	imx6q_add_dma();
+
+	imx6q_add_gpmi(&mx6q_gpmi_nand_platform_data);
 
 	imx6q_add_dvfs_core(&sabrelite_dvfscore_data);
 	mx6_cpu_regulator_init();
@@ -1163,10 +1073,12 @@ static void __init mx6_sabrelite_board_init(void)
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
 	imx6q_add_busfreq();
+
+	imx6q_add_pcie(&mx6_ceton_hera_pcie_data);
 }
 
 extern void __iomem *twd_base;
-static void __init mx6_sabrelite_timer_init(void)
+static void __init mx6_ceton_hera_timer_init(void)
 {
 	struct clk *uart_clk;
 #ifdef CONFIG_LOCAL_TIMERS
@@ -1179,11 +1091,11 @@ static void __init mx6_sabrelite_timer_init(void)
 	early_console_setup(UART2_BASE_ADDR, uart_clk);
 }
 
-static struct sys_timer mx6_sabrelite_timer = {
-	.init   = mx6_sabrelite_timer_init,
+static struct sys_timer mx6_ceton_hera_timer = {
+	.init   = mx6_ceton_hera_timer_init,
 };
 
-static void __init mx6q_sabrelite_reserve(void)
+static void __init mx6_ceton_hera_reserve(void)
 {
 	phys_addr_t phys;
 
@@ -1197,15 +1109,15 @@ static void __init mx6q_sabrelite_reserve(void)
 }
 
 /*
- * initialize __mach_desc_MX6Q_SABRELITE data structure.
+ * initialize __mach_desc_MX6_CETON_HERA data structure.
  */
-MACHINE_START(MX6Q_SABRELITE, "Freescale i.MX 6Quad Sabre-Lite Board")
+MACHINE_START(MX6_CETON_HERA, "Ceton i.MX6 Hera Board")
 	/* Maintainer: Freescale Semiconductor, Inc. */
 	.boot_params = MX6_PHYS_OFFSET + 0x100,
 	.fixup = fixup_mxc_board,
 	.map_io = mx6_map_io,
 	.init_irq = mx6_init_irq,
-	.init_machine = mx6_sabrelite_board_init,
-	.timer = &mx6_sabrelite_timer,
-	.reserve = mx6q_sabrelite_reserve,
+	.init_machine = mx6_ceton_hera_board_init,
+	.timer = &mx6_ceton_hera_timer,
+	.reserve = mx6_ceton_hera_reserve,
 MACHINE_END
