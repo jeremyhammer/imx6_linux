@@ -80,6 +80,7 @@
 #define MX6Q_SABRELITE_SD4_WP		IMX_GPIO_NR(2, 7)
 #define MX6Q_SABRELITE_ECSPI1_CS1	IMX_GPIO_NR(3, 19)
 #define MX6Q_SABRELITE_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
+#define MX6Q_CETON_HERA_USB_PWR_EN  IMX_GPIO_NR(3, 31)
 #define MX6Q_SABRELITE_CAP_TCH_INT1	IMX_GPIO_NR(1, 9)
 #define MX6Q_SABRELITE_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
 #define MX6Q_SABRELITE_CAN1_STBY	IMX_GPIO_NR(1, 2)
@@ -224,6 +225,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_EIM_DA14__GPIO_3_14,	/* J12 - Boot Mode Select */
 	MX6Q_PAD_EIM_DA15__GPIO_3_15,	/* J12 - Boot Mode Select */
 
+    MX6Q_PAD_EIM_D31__GPIO_3_31,     /* GPIO3[31] - USB PWR Enable# */
     MX6Q_PAD_GPIO_16__GPIO_7_11,     /* GPIO7[11] - PCIe rstn */
 
 	/* GPIO4 */
@@ -543,6 +545,16 @@ static void __init imx6q_sabrelite_init_usb(void)
 	}
 	gpio_direction_output(MX6Q_SABRELITE_USB_OTG_PWR, 0);
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
+
+	ret = gpio_request(MX6Q_CETON_HERA_USB_PWR_EN, "ceton-hera-usb-pwr");
+	if (ret) {
+		pr_err("failed to get GPIO MX6Q_CETON_HERA_USB_PWR_EN: %d\n",
+			ret);
+		return;
+	}
+
+	gpio_set_value(MX6Q_CETON_HERA_USB_PWR_EN, 0);
+	gpio_direction_output(MX6Q_CETON_HERA_USB_PWR_EN, 0);
 
 	mx6_set_otghost_vbus_func(imx6q_sabrelite_usbotg_vbus);
 	mx6_usb_dr_init();
