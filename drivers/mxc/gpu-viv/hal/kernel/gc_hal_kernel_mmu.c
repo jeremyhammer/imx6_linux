@@ -68,7 +68,7 @@ typedef struct _gcsSharedPageTable
     gckMMU          mmu;
 
     /* Hardwares which use this shared pagetable. */
-    gckHARDWARE     hardwares[gcdCORE_COUNT];
+    gckHARDWARE     hardwares[gcdGPU_COUNT];
 
     /* Number of cores use this shared pagetable. */
     gctUINT32       reference;
@@ -1163,6 +1163,10 @@ gckMMU_Enable(
     )
 {
     gceSTATUS status;
+#if gcdSHARED_PAGETABLE
+    gckHARDWARE hardware;
+    gctINT i;
+#endif
 
     gcmkHEADER_ARG("Mmu=0x%x", Mmu);
 
@@ -1196,6 +1200,24 @@ gckMMU_Enable(
 
         gcmkONERROR(_SetupDynamicSpace(Mmu));
 
+#if gcdSHARED_PAGETABLE
+        for(i = 0; i < gcdGPU_COUNT; i++)
+        {
+            hardware = sharedPageTable->hardwares[i];
+            if (hardware != gcvNULL)
+            {
+                gcmkONERROR(
+                    gckHARDWARE_SetMMUv2(
+                        hardware,
+                        gcvTRUE,
+                        Mmu->mtlbLogical,
+                        gcvMMU_MODE_4K,
+                        (gctUINT8_PTR)Mmu->mtlbLogical + gcdMMU_MTLB_SIZE,
+                        gcvFALSE
+                        ));
+            }
+        }
+#else
         gcmkONERROR(
             gckHARDWARE_SetMMUv2(
                 Mmu->hardware,
@@ -1205,6 +1227,7 @@ gckMMU_Enable(
                 (gctUINT8_PTR)Mmu->mtlbLogical + gcdMMU_MTLB_SIZE,
                 gcvFALSE
                 ));
+#endif
 
         Mmu->enabled = gcvTRUE;
 
@@ -1379,7 +1402,7 @@ gckMMU_Flush(
     gckHARDWARE hardware;
 #if gcdSHARED_PAGETABLE
     gctINT i;
-    for (i = 0; i < gcdCORE_COUNT; i++)
+    for (i = 0; i < gcdGPU_COUNT; i++)
     {
 #if gcdENABLE_VG
         if (i == gcvCORE_VG)

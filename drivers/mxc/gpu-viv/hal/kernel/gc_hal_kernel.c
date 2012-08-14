@@ -289,7 +289,10 @@ OnError:
             if (kernel->hardware != gcvNULL)
             {
                 /* Turn off the power. */
-                gcmkVERIFY_OK(gckOS_SetGPUPower(kernel->hardware->os, kernel->hardware->core, gcvFALSE, gcvFALSE));
+                gcmkVERIFY_OK(gckOS_SetGPUPower(kernel->hardware->os,
+                                                kernel->hardware->core,
+                                                gcvFALSE,
+                                                gcvFALSE));
                 gcmkVERIFY_OK(gckHARDWARE_Destroy(kernel->hardware));
             }
         }
@@ -1021,31 +1024,32 @@ gckKERNEL_Dispatch(
     case gcvHAL_MAP_USER_MEMORY:
         /* Map user memory to DMA. */
         gcmkONERROR(
-            gckOS_MapUserMemoryEx(Kernel->os,
-                                  Kernel->core,
-                                  Interface->u.MapUserMemory.memory,
-                                  Interface->u.MapUserMemory.size,
-                                  &Interface->u.MapUserMemory.info,
-                                  &Interface->u.MapUserMemory.address));
+            gckOS_MapUserMemory(Kernel->os,
+                                Kernel->core,
+                                Interface->u.MapUserMemory.memory,
+                                Interface->u.MapUserMemory.physical,
+                                Interface->u.MapUserMemory.size,
+                                &Interface->u.MapUserMemory.info,
+                                &Interface->u.MapUserMemory.address));
         gcmkVERIFY_OK(
             gckKERNEL_AddProcessDB(Kernel,
                                    processID, gcvDB_MAP_USER_MEMORY,
-                                   Interface->u.MapUserMemory.memory,
                                    Interface->u.MapUserMemory.info,
+                                   Interface->u.MapUserMemory.memory,
                                    Interface->u.MapUserMemory.size));
         break;
 
     case gcvHAL_UNMAP_USER_MEMORY:
-        address = Interface->u.MapUserMemory.address;
+        address = Interface->u.UnmapUserMemory.address;
 
         /* Unmap user memory. */
         gcmkONERROR(
-            gckOS_UnmapUserMemoryEx(Kernel->os,
-                                    Kernel->core,
-                                    Interface->u.UnmapUserMemory.memory,
-                                    Interface->u.UnmapUserMemory.size,
-                                    Interface->u.UnmapUserMemory.info,
-                                    address));
+            gckOS_UnmapUserMemory(Kernel->os,
+                                  Kernel->core,
+                                  Interface->u.UnmapUserMemory.memory,
+                                  Interface->u.UnmapUserMemory.size,
+                                  Interface->u.UnmapUserMemory.info,
+                                  address));
 
 #if gcdSECURE_USER
         gcmkVERIFY_OK(gckKERNEL_FlushTranslationCache(
@@ -1057,7 +1061,7 @@ gckKERNEL_Dispatch(
         gcmkVERIFY_OK(
             gckKERNEL_RemoveProcessDB(Kernel,
                                       processID, gcvDB_MAP_USER_MEMORY,
-                                      Interface->u.UnmapUserMemory.memory));
+                                      Interface->u.UnmapUserMemory.info));
         break;
 
 #if !USE_NEW_LINUX_SIGNAL
@@ -1168,9 +1172,10 @@ gckKERNEL_Dispatch(
 #if gcdREGISTER_ACCESS_FROM_USER
         {
             gceCHIPPOWERSTATE power;
+
+            gckOS_AcquireMutex(Kernel->os, Kernel->hardware->powerMutex, gcvINFINITE);
             gcmkONERROR(gckHARDWARE_QueryPowerManagementState(Kernel->hardware,
                                                               &power));
-
             if (power == gcvPOWER_ON)
             {
                 /* Read a register. */
@@ -1186,6 +1191,7 @@ gckKERNEL_Dispatch(
                 Interface->u.ReadRegisterData.data = 0;
                 status = gcvSTATUS_CHIP_NOT_READY;
             }
+            gcmkONERROR(gckOS_ReleaseMutex(Kernel->os, Kernel->hardware->powerMutex));
         }
 #else
         /* No access from user land to read registers. */
@@ -1196,12 +1202,29 @@ gckKERNEL_Dispatch(
 
     case gcvHAL_WRITE_REGISTER:
 #if gcdREGISTER_ACCESS_FROM_USER
-        /* Write a register. */
-        gcmkONERROR(
-            gckOS_WriteRegisterEx(Kernel->os,
-                                  Kernel->core,
-                                  Interface->u.WriteRegisterData.address,
-                                  Interface->u.WriteRegisterData.data));
+        {
+            gceCHIPPOWERSTATE power;
+
+            gckOS_AcquireMutex(Kernel->os, Kernel->hardware->powerMutex, gcvINFINITE);
+            gcmkONERROR(gckHARDWARE_QueryPowerManagementState(Kernel->hardware,
+                                                                  &power));
+            if (power == gcvPOWER_ON)
+            {
+                /* Write a register. */
+                gcmkONERROR(
+                    gckOS_WriteRegisterEx(Kernel->os,
+                                          Kernel->core,
+                                          Interface->u.WriteRegisterData.address,
+                                          Interface->u.WriteRegisterData.data));
+            }
+            else
+            {
+                /* Chip is in power-state. */
+                Interface->u.WriteRegisterData.data = 0;
+                status = gcvSTATUS_CHIP_NOT_READY;
+            }
+            gcmkONERROR(gckOS_ReleaseMutex(Kernel->os, Kernel->hardware->powerMutex));
+        }
 #else
         /* No access from user land to write registers. */
         status = gcvSTATUS_NOT_SUPPORTED;

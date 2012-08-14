@@ -64,6 +64,12 @@ extern "C" {
 #define gcdMMU_STLB_64K_MASK        ((~((1U << gcdMMU_STLB_64K_SHIFT)-1)) ^ gcdMMU_MTLB_MASK)
 #define gcdMMU_PAGE_64K_MASK        (gcdMMU_PAGE_64K_SIZE - 1)
 
+/* Page offset definitions. */
+#define gcdMMU_OFFSET_4K_BITS       (32 - gcdMMU_MTLB_BITS - gcdMMU_STLB_4K_BITS)
+#define gcdMMU_OFFSET_4K_MASK       ((1U << gcdMMU_OFFSET_4K_BITS) - 1)
+#define gcdMMU_OFFSET_16K_BITS      (32 - gcdMMU_MTLB_BITS - gcdMMU_STLB_16K_BITS)
+#define gcdMMU_OFFSET_16K_MASK      ((1U << gcdMMU_OFFSET_16K_BITS) - 1)
+
 /*******************************************************************************
 ***** Process Secure Cache ****************************************************/
 
@@ -607,24 +613,24 @@ typedef union _gcuVIDMEM_NODE
         gctSIZE_T               pageCount;
 
         /* Used only when node is not contiguous */
-        gctPOINTER              pageTables[gcdCORE_COUNT];
+        gctPOINTER              pageTables[gcdGPU_COUNT];
         /* Pointer to gckKERNEL object who lock this. */
-        gckKERNEL               lockKernels[gcdCORE_COUNT];
+        gckKERNEL               lockKernels[gcdGPU_COUNT];
         /* Actual physical address */
-        gctUINT32               addresses[gcdCORE_COUNT];
+        gctUINT32               addresses[gcdGPU_COUNT];
 
         /* Mutex. */
         gctPOINTER              mutex;
 
         /* Locked counter. */
-        gctINT32                lockeds[gcdCORE_COUNT];
+        gctINT32                lockeds[gcdGPU_COUNT];
 
 #ifdef __QNXNTO__
         /* Single linked list of nodes. */
         gcuVIDMEM_NODE_PTR      next;
 
         /* Unlock pending flag. */
-        gctBOOL                 unlockPendings[gcdCORE_COUNT];
+        gctBOOL                 unlockPendings[gcdGPU_COUNT];
 
         /* Free pending flag. */
         gctBOOL                 freePending;

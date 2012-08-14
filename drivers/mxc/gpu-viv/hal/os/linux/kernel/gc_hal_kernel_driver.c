@@ -49,44 +49,44 @@ static struct class* gpuClass;
 
 static gckGALDEVICE galDevice;
 
-static int major = 199;
-module_param(major, int, 0644);
+static uint major = 199;
+module_param(major, uint, 0644);
 
 static int irqLine = -1;
 module_param(irqLine, int, 0644);
 
-static long registerMemBase = 0x80000000;
-module_param(registerMemBase, long, 0644);
+static ulong registerMemBase = 0x80000000;
+module_param(registerMemBase, ulong, 0644);
 
-static ulong registerMemSize = 256 << 10;
+static ulong registerMemSize = 2 << 10;
 module_param(registerMemSize, ulong, 0644);
 
 static int irqLine2D = -1;
 module_param(irqLine2D, int, 0644);
 
-static long registerMemBase2D = 0x00000000;
-module_param(registerMemBase2D, long, 0644);
+static ulong registerMemBase2D = 0x00000000;
+module_param(registerMemBase2D, ulong, 0644);
 
-static ulong registerMemSize2D = 256 << 10;
+static ulong registerMemSize2D = 2 << 10;
 module_param(registerMemSize2D, ulong, 0644);
 
 static int irqLineVG = -1;
 module_param(irqLineVG, int, 0644);
 
-static long registerMemBaseVG = 0x00000000;
-module_param(registerMemBaseVG, long, 0644);
+static ulong registerMemBaseVG = 0x00000000;
+module_param(registerMemBaseVG, ulong, 0644);
 
-static ulong registerMemSizeVG = 256 << 10;
+static ulong registerMemSizeVG = 2 << 10;
 module_param(registerMemSizeVG, ulong, 0644);
 
-static long contiguousSize = 4 << 20;
-module_param(contiguousSize, long, 0644);
+static ulong contiguousSize = 4 << 20;
+module_param(contiguousSize, ulong, 0644);
 
 static ulong contiguousBase = 0;
 module_param(contiguousBase, ulong, 0644);
 
-static long bankSize = 32 << 20;
-module_param(bankSize, long, 0644);
+static ulong bankSize = 0;
+module_param(bankSize, ulong, 0644);
 
 static int fastClear = -1;
 module_param(fastClear, int, 0644);
@@ -182,7 +182,7 @@ int drv_open(
     gcmkONERROR(gckOS_GetProcessID(&data->pidOpen));
 
     /* Attached the process. */
-    for (i = 0; i < gcdCORE_COUNT; i++)
+    for (i = 0; i < gcdGPU_COUNT; i++)
     {
         if (galDevice->kernels[i] != gcvNULL)
         {
@@ -199,20 +199,6 @@ int drv_open(
             galDevice->contiguousSize,
             &data->contiguousLogical
             ));
-
-        for (i = 0; i < gcdCORE_COUNT; i++)
-        {
-            if (galDevice->kernels[i] != gcvNULL)
-            {
-                gcmkVERIFY_OK(gckKERNEL_AddProcessDB(
-                    galDevice->kernels[i],
-                    data->pidOpen,
-                    gcvDB_MAP_MEMORY,
-                    data->contiguousLogical,
-                    galDevice->contiguousPhysical,
-                    galDevice->contiguousSize));
-            }
-        }
     }
 
     filp->private_data = data;
@@ -239,7 +225,7 @@ OnError:
 
     if (attached)
     {
-        for (i = 0; i < gcdCORE_COUNT; i++)
+        for (i = 0; i < gcdGPU_COUNT; i++)
         {
             if (galDevice->kernels[i] != gcvNULL)
             {
@@ -261,8 +247,6 @@ int drv_release(
     gcsHAL_PRIVATE_DATA_PTR data;
     gckGALDEVICE device;
     gctINT i;
-    gctUINT32 processID;
-
 
     gcmkHEADER_ARG("inode=0x%08X filp=0x%08X", inode, filp);
 
@@ -307,7 +291,6 @@ int drv_release(
     {
         if (data->contiguousLogical != gcvNULL)
         {
-            gcmkVERIFY_OK(gckOS_GetProcessID(&processID));
             gcmkONERROR(gckOS_UnmapMemoryEx(
                 galDevice->os,
                 galDevice->contiguousPhysical,
@@ -316,27 +299,12 @@ int drv_release(
                 data->pidOpen
                 ));
 
-            for (i = 0; i < gcdCORE_COUNT; i++)
-            {
-                if (galDevice->kernels[i] != gcvNULL)
-                {
-                    gcmkVERIFY_OK(
-                         gckKERNEL_RemoveProcessDB(galDevice->kernels[i],
-                                                   processID, gcvDB_MAP_MEMORY,
-                                                   data->contiguousLogical));
-                }
-            }
-
             data->contiguousLogical = gcvNULL;
         }
     }
 
-    /* Clean user signals if exit unnormally. */
-    gcmkVERIFY_OK(gckOS_GetProcessID(&processID));
-    gcmkVERIFY_OK(gckOS_CleanProcessSignal(galDevice->os, (gctHANDLE)processID));
-
     /* A process gets detached. */
-    for (i = 0; i < gcdCORE_COUNT; i++)
+    for (i = 0; i < gcdGPU_COUNT; i++)
     {
         if (galDevice->kernels[i] != gcvNULL)
         {
@@ -474,7 +442,7 @@ long drv_ioctl(
     if (iface.command == gcvHAL_CHIP_INFO)
     {
         count = 0;
-        for (i = 0; i < gcdCORE_COUNT; i++)
+        for (i = 0; i < gcdGPU_COUNT; i++)
         {
             if (device->kernels[i] != gcvNULL)
             {
@@ -991,7 +959,7 @@ static int __devinit gpu_suspend(struct platform_device *dev, pm_message_t state
 
     device = platform_get_drvdata(dev);
 
-    for (i = 0; i < gcdCORE_COUNT; i++)
+    for (i = 0; i < gcdGPU_COUNT; i++)
     {
         if (device->kernels[i] != gcvNULL)
         {
@@ -1022,8 +990,6 @@ static int __devinit gpu_suspend(struct platform_device *dev, pm_message_t state
             {
                 status = gckHARDWARE_SetPowerManagementState(device->kernels[i]->hardware, gcvPOWER_OFF);
             }
-            /*gpu clock must be turned on before power down*/
-            gckOS_SetGPUPower(device->os, i, gcvTRUE, gcvFALSE);
             if (gcmIS_ERROR(status))
             {
                 return -1;
@@ -1044,7 +1010,7 @@ static int __devinit gpu_resume(struct platform_device *dev)
 
     device = platform_get_drvdata(dev);
 
-    for (i = 0; i < gcdCORE_COUNT; i++)
+    for (i = 0; i < gcdGPU_COUNT; i++)
     {
         if (device->kernels[i] != gcvNULL)
         {

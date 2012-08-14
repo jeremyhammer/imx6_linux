@@ -835,6 +835,14 @@ gco3D_SetDepthScaleBiasF(
     IN gctFLOAT DepthBias
     );
 
+/* Set depth near and far clipping plane. */
+gceSTATUS
+gco3D_SetDepthPlaneF(
+    IN gco3D Engine,
+    IN gctFLOAT Near,
+    IN gctFLOAT Far
+    );
+
 /* Enable or disable dithering. */
 gceSTATUS
 gco3D_EnableDither(
@@ -1165,6 +1173,27 @@ gco3D_InvokeThreadWalker(
     IN gcsTHREAD_WALKER_INFO_PTR Info
     );
 
+#if gcdUSE_WCLIP_PATCH
+/* Set w clip and w plane limit value. */
+gceSTATUS
+gco3D_SetWClipEnable(
+	IN gco3D Engine,
+	IN gctBOOL Enable
+    );
+
+gceSTATUS
+gco3D_SetWPlaneLimitF(
+	IN gco3D Engine,
+	IN gctFLOAT Value
+    );
+
+gceSTATUS
+gco3D_SetWPlaneLimitX(
+	IN gco3D Engine,
+	IN gctFIXED_POINT Value
+    );
+#endif
+
 /*----------------------------------------------------------------------------*/
 /*-------------------------- gco3D Fragment Processor ------------------------*/
 
@@ -1429,6 +1458,7 @@ gceSTATUS
 gcoTEXTURE_AddMipMap(
     IN gcoTEXTURE Texture,
     IN gctINT Level,
+    IN gctINT imageFormat,
     IN gceSURF_FORMAT Format,
     IN gctUINT Width,
     IN gctUINT Height,
@@ -1701,6 +1731,9 @@ typedef struct _gcsVERTEXARRAY
 
     /* Generic values for attribute. */
     gctFLOAT            genericValue[4];
+
+    /* Generic size for attribute. */
+    gctINT              genericSize;
 
     /* Vertex shader linkage. */
     gctUINT             linkage;
