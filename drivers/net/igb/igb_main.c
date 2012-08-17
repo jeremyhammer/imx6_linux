@@ -2057,6 +2057,31 @@ out:
 	return;
 }
 
+#define HW_OCOTP_MACn(n)        (0x00000620 + (n) * 0x10)
+int get_mac_addr(unsigned char *mac)
+{
+	unsigned int value;
+    uint8_t* base = ioremap(OCOTP_BASE_ADDR, 1024);
+
+    if(base) {
+        value = ioread32(&base[HW_OCOTP_MACn(0)]);
+        mac[5] = value & 0xff;
+        mac[4] = (value >> 8) & 0xff;
+        mac[3] = (value >> 16) & 0xff;
+        mac[2] = (value >> 24) & 0xff;
+        value = ioread32(&base[HW_OCOTP_MACn(1)]);
+        mac[1] = value & 0xff;
+        mac[0] = (value >> 8) & 0xff;
+
+        iounmap( base );
+    }
+
+	if(!is_valid_ether_addr(mac))
+		random_ether_addr(mac);
+
+	return 0;
+}
+
 /**
  * igb_probe - Device Initialization Routine
  * @pdev: PCI device information struct
@@ -2080,6 +2105,7 @@ static int __devinit igb_probe(struct pci_dev *pdev,
 	static int global_quad_port_a; /* global quad port a indication */
 	int i, err, pci_using_dac;
 	static int cards_found;
+	struct sockaddr addr;
 
 	err = pci_enable_device_mem(pdev);
 	if (err)
@@ -2288,6 +2314,9 @@ static int __devinit igb_probe(struct pci_dev *pdev,
 		err = -EIO;
 		goto err_eeprom;
 	}
+
+    get_mac_addr(addr.sa_data);
+    igb_set_mac(netdev, &addr);
 
 	/* copy the MAC address out of the NVM */
 	if (e1000_read_mac_addr(hw))
