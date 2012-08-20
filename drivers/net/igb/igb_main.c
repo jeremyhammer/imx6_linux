@@ -2453,9 +2453,9 @@ static int __devinit igb_probe(struct pci_dev *pdev,
 	         ((hw->bus.speed == e1000_bus_speed_2500) ? "2.5GT/s" :
 	          (hw->bus.speed == e1000_bus_speed_5000) ? "5.0GT/s" :
 	                                                    "unknown"),
-	         ((hw->bus.width == e1000_bus_width_pcie_x4) ? "Width x4\n" :
-	          (hw->bus.width == e1000_bus_width_pcie_x2) ? "Width x2\n" :
-	          (hw->bus.width == e1000_bus_width_pcie_x1) ? "Width x1\n" :
+	         ((hw->bus.width == e1000_bus_width_pcie_x4) ? "Width x4" :
+	          (hw->bus.width == e1000_bus_width_pcie_x2) ? "Width x2" :
+	          (hw->bus.width == e1000_bus_width_pcie_x1) ? "Width x1" :
 	           "unknown"));
 	dev_info(pci_dev_to_dev(pdev), "%s: MAC: ", netdev->name);
 	for (i = 0; i < 6; i++)
