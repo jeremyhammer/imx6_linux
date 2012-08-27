@@ -227,6 +227,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 
     MX6Q_PAD_EIM_D31__GPIO_3_31,     /* GPIO3[31] - USB PWR Enable# */
     MX6Q_PAD_GPIO_16__GPIO_7_11,     /* GPIO7[11] - PCIe rstn */
+	MX6Q_PAD_GPIO_17__SPDIF_OUT1,
 
 	/* GPIO4 */
 	MX6Q_PAD_GPIO_19__GPIO_4_5,	/* J14 - Volume Down */
@@ -961,6 +962,43 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 	.pixel_clk = "emi_clk",
 };
 
+static int spdif_clk_set_rate(struct clk *clk, unsigned long rate)
+{
+	unsigned long rate_actual;
+	rate_actual = clk_round_rate(clk, rate);
+	clk_set_rate(clk, rate_actual);
+	return 0;
+}
+
+static struct mxc_spdif_platform_data mxc_spdif_data = {
+	.spdif_tx		= 1,		/* enable tx */
+	.spdif_rx		= 0,		/* enable rx */
+	/*
+	 * spdif0_clk will be 454.7MHz divided by ccm dividers.
+	 *
+	 * 44.1KHz: 454.7MHz / 7 (ccm) / 23 (spdif) = 44,128 Hz ~ 0.06% error
+	 * 48KHz:   454.7MHz / 4 (ccm) / 37 (spdif) = 48,004 Hz ~ 0.01% error
+	 * 32KHz:   454.7MHz / 6 (ccm) / 37 (spdif) = 32,003 Hz ~ 0.01% error
+	 */
+	.spdif_clk_44100	= 1,    /* tx clk from spdif0_clk_root */
+	.spdif_clk_48000	= 1,    /* tx clk from spdif0_clk_root */
+	.spdif_div_44100	= 23,
+	.spdif_div_48000	= 37,
+	.spdif_div_32000	= 37,
+	.spdif_rx_clk		= 0,    /* rx clk from spdif stream */
+	.spdif_clk_set_rate	= spdif_clk_set_rate,
+	.spdif_clk		= NULL, /* spdif bus clk */
+};
+
+static void spdif_device_init(void)
+{
+    mxc_spdif_data.spdif_core_clk = clk_get_sys("mxc_spdif.0", NULL);
+    clk_put(mxc_spdif_data.spdif_core_clk);
+    imx6q_add_spdif(&mxc_spdif_data);
+    imx6q_add_spdif_dai();
+    imx6q_add_spdif_audio_device();
+}
+
 #define CETON_HERA_PCIE_PWR_EN	IMX_GPIO_NR(3, 19)
 #define CETON_HERA_PCIE_RST_B_REVB	IMX_GPIO_NR(7, 11)
 #define CETON_HERA_PCIE_WAKE_B	IMX_GPIO_NR(5, 20)
@@ -1024,6 +1062,8 @@ static void __init mx6_ceton_hera_board_init(void)
 	/* SPI */
 	imx6q_add_ecspi(0, &mx6q_sabrelite_spi_data);
 	spi_device_init();
+
+    spdif_device_init();
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
