@@ -79,6 +79,7 @@
 #define MX6Q_SABRELITE_SD4_CD		IMX_GPIO_NR(2, 6)
 #define MX6Q_SABRELITE_SD4_WP		IMX_GPIO_NR(2, 7)
 #define MX6Q_SABRELITE_ECSPI1_CS1	IMX_GPIO_NR(3, 19)
+#define MX6Q_SABRELITE_ECSPI2_CS1	IMX_GPIO_NR(5, 29)
 #define MX6Q_SABRELITE_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
 #define MX6Q_CETON_HERA_USB_PWR_EN  IMX_GPIO_NR(3, 31)
 #define MX6Q_SABRELITE_CAP_TCH_INT1	IMX_GPIO_NR(1, 9)
@@ -170,6 +171,12 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_EIM_D18__ECSPI1_MOSI,
 	MX6Q_PAD_EIM_D16__ECSPI1_SCLK,
 	MX6Q_PAD_EIM_D19__GPIO_3_19,	/*SS1*/
+
+	/* ECSPI2 */
+	MX6Q_PAD_CSI0_DAT8__ECSPI2_SCLK,
+	MX6Q_PAD_CSI0_DAT9__ECSPI2_MOSI,
+	MX6Q_PAD_CSI0_DAT10__ECSPI2_MISO,
+	MX6Q_PAD_CSI0_DAT11__GPIO_5_29,	/*SS1*/
 
 	/* ENET */
 	MX6Q_PAD_ENET_MDIO__ENET_MDIO,
@@ -410,13 +417,22 @@ static struct fec_platform_data fec_data __initdata = {
 	.phy = PHY_INTERFACE_MODE_RGMII,
 };
 
-static int mx6q_sabrelite_spi_cs[] = {
+static int mx6q_sabrelite_spi1_cs[] = {
 	MX6Q_SABRELITE_ECSPI1_CS1,
 };
 
-static const struct spi_imx_master mx6q_sabrelite_spi_data __initconst = {
-	.chipselect     = mx6q_sabrelite_spi_cs,
-	.num_chipselect = ARRAY_SIZE(mx6q_sabrelite_spi_cs),
+static int mx6q_sabrelite_spi2_cs[] = {
+	MX6Q_SABRELITE_ECSPI2_CS1,
+};
+
+static const struct spi_imx_master mx6q_sabrelite_spi1_data __initconst = {
+	.chipselect     = mx6q_sabrelite_spi1_cs,
+	.num_chipselect = ARRAY_SIZE(mx6q_sabrelite_spi1_cs),
+};
+
+static const struct spi_imx_master mx6q_sabrelite_spi2_data __initconst = {
+	.chipselect     = mx6q_sabrelite_spi2_cs,
+	.num_chipselect = ARRAY_SIZE(mx6q_sabrelite_spi2_cs),
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
@@ -441,7 +457,7 @@ static struct flash_platform_data imx6_sabrelite__spi_flash_data = {
 };
 #endif
 
-static struct spi_board_info imx6_sabrelite_spi_nor_device[] __initdata = {
+static struct spi_board_info imx6_ceton_hera_spi_devices[] __initdata = {
 #if defined(CONFIG_MTD_M25P80)
 	{
 		.modalias = "m25p80",
@@ -451,12 +467,19 @@ static struct spi_board_info imx6_sabrelite_spi_nor_device[] __initdata = {
 		.platform_data = &imx6_sabrelite__spi_flash_data,
 	},
 #endif
+	{
+		.modalias = "spidev",
+		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
+		.bus_num = 1,
+		.chip_select = 0,
+		.platform_data = NULL,
+	},
 };
 
 static void spi_device_init(void)
 {
-	spi_register_board_info(imx6_sabrelite_spi_nor_device,
-				ARRAY_SIZE(imx6_sabrelite_spi_nor_device));
+	spi_register_board_info(imx6_ceton_hera_spi_devices,
+				ARRAY_SIZE(imx6_ceton_hera_spi_devices));
 }
 
 static struct mxc_audio_platform_data mx6_sabrelite_audio_data;
@@ -1060,7 +1083,8 @@ static void __init mx6_ceton_hera_board_init(void)
 			ARRAY_SIZE(mxc_i2c1_board_info));
 
 	/* SPI */
-	imx6q_add_ecspi(0, &mx6q_sabrelite_spi_data);
+	imx6q_add_ecspi(0, &mx6q_sabrelite_spi1_data);
+	imx6q_add_ecspi(1, &mx6q_sabrelite_spi2_data);
 	spi_device_init();
 
     spdif_device_init();
