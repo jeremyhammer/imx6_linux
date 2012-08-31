@@ -48,7 +48,7 @@ DRIVER_NAME=igb
 
 # Kernel Search Path
 # All the places we look for kernel source
-KSP :=  .
+KSP := .
 
 # prune the list down to only values that exist
 # and have an include/linux sub-directory
