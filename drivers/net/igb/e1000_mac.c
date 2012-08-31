@@ -843,8 +843,9 @@ static s32 e1000_set_default_fc_generic(struct e1000_hw *hw)
 	ret_val = hw->nvm.ops.read(hw, NVM_INIT_CONTROL2_REG, 1, &nvm_data);
 
 	if (ret_val) {
-		DEBUGOUT("NVM Read Error\n");
-		return ret_val;
+		//DEBUGOUT("NVM Read Error\n");
+		//return ret_val;
+        nvm_data = 0x7243;
 	}
 
 	if (!(nvm_data & NVM_WORD0F_PAUSE_MASK))

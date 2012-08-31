@@ -1962,6 +1962,32 @@ out:
 	return;
 }
 
+#define HW_OCOTP_MACn(n)        (0x00000620 + (n) * 0x10)
+int get_mac_addr(unsigned char *mac)
+{
+       unsigned int value;
+    uint8_t* base = ioremap(OCOTP_BASE_ADDR, 1024);
+
+    if(base) {
+        value = ioread32(&base[HW_OCOTP_MACn(0)]);
+        mac[5] = value & 0xff;
+        mac[4] = (value >> 8) & 0xff;
+        mac[3] = (value >> 16) & 0xff;
+        mac[2] = (value >> 24) & 0xff;
+        value = ioread32(&base[HW_OCOTP_MACn(1)]);
+        mac[1] = value & 0xff;
+        mac[0] = (value >> 8) & 0xff;
+
+        iounmap( base );
+    }
+
+       if(!is_valid_ether_addr(mac))
+               random_ether_addr(mac);
+
+       return 0;
+}
+
+
 /**
  * igb_probe - Device Initialization Routine
  * @pdev: PCI device information struct
@@ -1985,6 +2011,7 @@ static int __devinit igb_probe(struct pci_dev *pdev,
 	static int global_quad_port_a; /* global quad port a indication */
 	int i, err, pci_using_dac;
 	static int cards_found;
+    struct sockaddr addr;
 
 	err = pci_enable_device_mem(pdev);
 	if (err)
@@ -2190,6 +2217,9 @@ static int __devinit igb_probe(struct pci_dev *pdev,
 		goto err_eeprom;
 	}
 
+    get_mac_addr(addr.sa_data);
+    igb_set_mac(netdev, &addr);
+
 	/* copy the MAC address out of the NVM */
 	if (e1000_read_mac_addr(hw))
 		dev_err(pci_dev_to_dev(pdev), "NVM Read Error\n");
@@ -2326,9 +2356,9 @@ static int __devinit igb_probe(struct pci_dev *pdev,
 	         ((hw->bus.speed == e1000_bus_speed_2500) ? "2.5GT/s" :
 	          (hw->bus.speed == e1000_bus_speed_5000) ? "5.0GT/s" :
 	                                                    "unknown"),
-	         ((hw->bus.width == e1000_bus_width_pcie_x4) ? "Width x4\n" :
-	          (hw->bus.width == e1000_bus_width_pcie_x2) ? "Width x2\n" :
-	          (hw->bus.width == e1000_bus_width_pcie_x1) ? "Width x1\n" :
+	         ((hw->bus.width == e1000_bus_width_pcie_x4) ? "Width x4" :
+	          (hw->bus.width == e1000_bus_width_pcie_x2) ? "Width x2" :
+	          (hw->bus.width == e1000_bus_width_pcie_x1) ? "Width x1" :
 	           "unknown"));
 	dev_info(pci_dev_to_dev(pdev), "%s: MAC: ", netdev->name);
 	for (i = 0; i < 6; i++)
