@@ -44,12 +44,6 @@
 #include <linux/ethtool.h>
 #endif
 
-#ifdef HAVE_HW_TIME_STAMP
-#include <linux/clocksource.h>
-#include <linux/timecompare.h>
-#include <linux/net_tstamp.h>
-
-#endif
 struct igb_adapter;
 
 #if defined(CONFIG_DCA) || defined(CONFIG_DCA_MODULE)
@@ -58,11 +52,6 @@ struct igb_adapter;
 #ifdef IGB_DCA
 #include <linux/dca.h>
 #endif
-
-#ifndef HAVE_HW_TIME_STAMP
-#undef IGB_PER_PKT_TIMESTAMP
-#endif
-
 
 #include "kcompat.h"
 
@@ -83,6 +72,12 @@ struct igb_adapter;
 	printk(KERN_##klevel PFX "%s: %s: " fmt, adapter->netdev->name, \
 		__FUNCTION__ , ## args))
 
+#ifdef CONFIG_IGB_PTP
+#include <linux/clocksource.h>
+#include <linux/net_tstamp.h>
+#include <linux/ptp_clock_kernel.h>
+#endif /* CONFIG_IGB_PTP */
+
 /* Interrupt defines */
 #define IGB_START_ITR                    648 /* ~6000 ints/sec */
 #define IGB_4K_ITR                       980
@@ -96,9 +91,9 @@ struct igb_adapter;
 
 /* TX/RX descriptor defines */
 #define IGB_DEFAULT_TXD                  256
-#define IGB_DEFAULT_TX_WORK		 128
 #define IGB_MIN_TXD                       80
 #define IGB_MAX_TXD                     4096
+#define IGB_DEFAULT_TX_WORK		 128
 
 #define IGB_DEFAULT_RXD                  256
 #define IGB_MIN_RXD                       80
@@ -206,9 +201,7 @@ struct vf_data_storage {
 #define IGB_RX_BUFFER_WRITE	16	/* Must be power of 2 */
 
 #define IGB_EEPROM_APME         0x0400
-#ifndef ETH_TP_MDI_X
 #define AUTO_ALL_MODES          0
-#endif
 
 #ifndef IGB_MASTER_SLAVE
 /* Switch to override PHY master/slave setting */
@@ -328,7 +321,6 @@ struct igb_q_vector {
 	struct igb_ring_container rx, tx;
 
 	struct napi_struct napi;
-	int numa_node;
 
 	u16 itr_val;
 	u8 set_itr;
@@ -383,8 +375,6 @@ struct igb_ring {
 #endif
 	/* Items past this point are only used during ring alloc / free */
 	dma_addr_t dma;                 /* phys address of the ring */
-	int numa_node;                  /* node to alloc ring memory on */
-
 } ____cacheline_internodealigned_in_smp;
 
 enum e1000_ring_flags_t {
@@ -516,12 +506,6 @@ struct igb_adapter {
 #ifndef IGB_NO_LRO
 	struct igb_lro_stats lro_stats;
 #endif
-#ifdef HAVE_HW_TIME_STAMP
-	struct cyclecounter cycles;
-	struct timecounter clock;
-	struct timecompare compare;
-	struct hwtstamp_config hwtstamp_config;
-#endif
 
 	/* structs defined in e1000_hw.h */
 	struct e1000_hw hw;
@@ -560,7 +544,6 @@ struct igb_adapter {
 	u32 rss_queues;
 	u32 vmdq_pools;
 	char fw_version[32];
-	int node;
 	u32 wvbr;
 	struct igb_mac_addr *mac_table;
 #ifdef CONFIG_IGB_VMDQ_NETDEV
@@ -584,6 +567,17 @@ struct igb_adapter {
 #endif /* IGB_PROCFS */
 #endif /* IGB_SYSFS */
 	u32 etrack_id;
+
+#ifdef CONFIG_IGB_PTP
+	struct ptp_clock *ptp_clock;
+	struct ptp_clock_info ptp_caps;
+	struct delayed_work ptp_overflow_work;
+	struct work_struct ptp_tx_work;
+	struct sk_buff *ptp_tx_skb;
+	spinlock_t tmreg_lock;
+	struct cyclecounter cc;
+	struct timecounter tc;
+#endif /* CONFIG_IGB_PTP */
 };
 
 #ifdef CONFIG_IGB_VMDQ_NETDEV
@@ -612,6 +606,7 @@ struct igb_vmdq_adapter {
 #define IGB_FLAG_EEE               (1 << 6)
 #define IGB_FLAG_DMAC              (1 << 7)
 #define IGB_FLAG_DETECT_BAD_DMA    (1 << 8)
+#define IGB_FLAG_PTP               (1 << 9)
 
 #define IGB_MIN_TXPBSIZE           20408
 #define IGB_TX_BUF_4096            4096
@@ -704,6 +699,18 @@ extern bool igb_has_link(struct igb_adapter *adapter);
 extern void igb_set_ethtool_ops(struct net_device *);
 extern void igb_check_options(struct igb_adapter *);
 extern void igb_power_up_link(struct igb_adapter *);
+#ifdef CONFIG_IGB_PTP
+extern void igb_ptp_init(struct igb_adapter *adapter);
+extern void igb_ptp_stop(struct igb_adapter *adapter);
+extern void igb_ptp_reset(struct igb_adapter *adapter);
+extern void igb_ptp_tx_work(struct work_struct *work);
+extern void igb_ptp_tx_hwtstamp(struct igb_adapter *adapter);
+extern void igb_ptp_rx_hwtstamp(struct igb_q_vector *q_vector,
+				union e1000_adv_rx_desc *rx_desc,
+				struct sk_buff *skb);
+extern int igb_ptp_hwtstamp_ioctl(struct net_device *netdev,
+				  struct ifreq *ifr, int cmd);
+#endif /* CONFIG_IGB_PTP */
 #ifdef ETHTOOL_OPS_COMPAT
 extern int ethtool_ioctl(struct ifreq *);
 #endif

@@ -421,7 +421,7 @@ static s32 e1000_init_mac_params_82575(struct e1000_hw *hw)
 	mac->ops.config_collision_dist = e1000_config_collision_dist_82575;
 	/* multicast address update */
 	mac->ops.update_mc_addr_list = e1000_update_mc_addr_list_generic;
-	if (hw->mac.type == e1000_i350) {
+	if (mac->type == e1000_i350) {
 		/* writing VFTA */
 		mac->ops.write_vfta = e1000_write_vfta_i350;
 		/* clearing VFTA */
@@ -1674,8 +1674,11 @@ static s32 e1000_get_media_type_82575(struct e1000_hw *hw)
 				goto out;
 			if (hw->phy.media_type ==
 				e1000_media_type_internal_serdes) {
-				current_link_mode =
+				/* Keep Link Mode as SGMII for 100BaseFX */
+				if (!dev_spec->eth_flags.e100_base_fx) {
+					current_link_mode =
 					 E1000_CTRL_EXT_LINK_MODE_PCIE_SERDES;
+				}
 			} else if (hw->phy.media_type ==
 				e1000_media_type_copper) {
 				current_link_mode =
@@ -1728,22 +1731,29 @@ static s32 e1000_set_sfp_media_type_82575(struct e1000_hw *hw)
 	s32 ret_val = E1000_ERR_CONFIG;
 	u32 ctrl_ext = 0;
 	struct e1000_dev_spec_82575 *dev_spec = &hw->dev_spec._82575;
-	struct sfp_e1000_flags eth_flags = {0};
+	struct sfp_e1000_flags *eth_flags = &dev_spec->eth_flags;
 	u8 tranceiver_type = 0;
+	s32 timeout = 3;
 
 	/* Turn I2C interface ON */
 	ctrl_ext = E1000_READ_REG(hw, E1000_CTRL_EXT);
 	E1000_WRITE_REG(hw, E1000_CTRL_EXT, ctrl_ext | E1000_CTRL_I2C_ENA);
 
 	/* Read SFP module data */
-	ret_val = e1000_read_sfp_data_byte(hw,
+	while (timeout) {
+		ret_val = e1000_read_sfp_data_byte(hw,
 			E1000_I2CCMD_SFP_DATA_ADDR(E1000_SFF_IDENTIFIER_OFFSET),
 			&tranceiver_type);
+		if (ret_val == E1000_SUCCESS)
+			break;
+		msec_delay(100);
+		timeout--;
+	}
 	if (ret_val != E1000_SUCCESS)
 		goto out;
 	ret_val = e1000_read_sfp_data_byte(hw,
 			E1000_I2CCMD_SFP_DATA_ADDR(E1000_SFF_ETH_FLAGS_OFFSET),
-			(u8 *)&eth_flags);
+			(u8 *)eth_flags);
 	if (ret_val != E1000_SUCCESS)
 		goto out;
 	/*
@@ -1753,9 +1763,12 @@ static s32 e1000_set_sfp_media_type_82575(struct e1000_hw *hw)
 	if ((tranceiver_type == E1000_SFF_IDENTIFIER_SFP) ||
 	    (tranceiver_type == E1000_SFF_IDENTIFIER_SFF)) {
 		dev_spec->module_plugged = true;
-		if (eth_flags.e1000_base_lx || eth_flags.e1000_base_sx) {
+		if (eth_flags->e1000_base_lx || eth_flags->e1000_base_sx) {
 			hw->phy.media_type = e1000_media_type_internal_serdes;
-		} else if (eth_flags.e1000_base_t) {
+		} else if (eth_flags->e100_base_fx) {
+			dev_spec->sgmii_active = true;
+			hw->phy.media_type = e1000_media_type_internal_serdes;
+		} else if (eth_flags->e1000_base_t) {
 			dev_spec->sgmii_active = true;
 			hw->phy.media_type = e1000_media_type_copper;
 		} else {
@@ -2661,6 +2674,14 @@ s32 e1000_set_eee_i350(struct e1000_hw *hw)
 		ipcnfg |= (E1000_IPCNFG_EEE_1G_AN | E1000_IPCNFG_EEE_100M_AN);
 		eeer |= (E1000_EEER_TX_LPI_EN | E1000_EEER_RX_LPI_EN |
 			 E1000_EEER_LPI_FC);
+
+		/* keep the LPI clock running before EEE is enabled */
+		if (hw->mac.type == e1000_i210 || hw->mac.type == e1000_i211) {
+			u32 eee_su;
+			eee_su = E1000_READ_REG(hw, E1000_EEE_SU);
+			eee_su &= ~E1000_EEE_SU_LPI_CLK_STP;
+			E1000_WRITE_REG(hw, E1000_EEE_SU, eee_su);
+		}
 
 	} else {
 		ipcnfg &= ~(E1000_IPCNFG_EEE_1G_AN | E1000_IPCNFG_EEE_100M_AN);

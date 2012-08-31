@@ -1650,6 +1650,8 @@ extern void *_kc_kzalloc(size_t size, int flags);
 #define ESTATUS_1000_TFULL	0x2000	/* Can do 1000BT Full */
 #define ESTATUS_1000_THALF	0x1000	/* Can do 1000BT Half */
 
+#define SUPPORTED_Pause	        (1 << 13)
+#define SUPPORTED_Asym_Pause	(1 << 14)
 #define ADVERTISED_Pause	(1 << 13)
 #define ADVERTISED_Asym_Pause	(1 << 14)
 
@@ -1917,6 +1919,10 @@ do { \
 	PCI_ANY_ID, PCI_ANY_ID, 0, 0
 #endif
 
+#ifndef PCI_VENDOR_ID_INTEL
+#define PCI_VENDOR_ID_INTEL 0x8086
+#endif
+
 #ifndef round_jiffies
 #define round_jiffies(x) x
 #endif
@@ -2150,6 +2156,10 @@ static inline int _kc_skb_is_gso_v6(const struct sk_buff *skb)
 
 #ifndef KERN_CONT
 #define KERN_CONT	""
+#endif
+#ifndef pr_err
+#define pr_err(fmt, arg...) \
+	printk(KERN_ERR fmt, ##arg)
 #endif
 #else /* < 2.6.24 */
 #define HAVE_ETHTOOL_GET_SSET_COUNT
@@ -2425,6 +2435,12 @@ static inline void __kc_skb_queue_head_init(struct sk_buff_head *list)
 #ifndef PORT_OTHER
 #define PORT_OTHER 0xff
 #endif
+#ifndef MDIO_PHY_ID_PRTAD
+#define MDIO_PHY_ID_PRTAD 0x03e0
+#endif
+#ifndef MDIO_PHY_ID_DEVAD
+#define MDIO_PHY_ID_DEVAD 0x001f
+#endif
 #else /* < 2.6.31 */
 #ifndef HAVE_NETDEV_STORAGE_ADDRESS
 #define HAVE_NETDEV_STORAGE_ADDRESS
@@ -2434,6 +2450,9 @@ static inline void __kc_skb_queue_head_init(struct sk_buff_head *list)
 #endif
 #ifndef HAVE_TRANS_START_IN_QUEUE
 #define HAVE_TRANS_START_IN_QUEUE
+#endif
+#ifndef HAVE_INCLUDE_LINUX_MDIO_H
+#define HAVE_INCLUDE_LINUX_MDIO_H
 #endif
 #endif /* < 2.6.31 */
 
@@ -2980,6 +2999,16 @@ struct _kc_ethtool_rx_flow_spec {
 #endif /* < 2.6.40 */
 
 /*****************************************************************************/
+
+/*****************************************************************************/
+#undef CONFIG_IGB_PTP
+#ifdef IGB_PTP
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0) ) && (defined(CONFIG_PTP_1588_CLOCK) || defined(CONFIG_PTP_1588_CLOCK_MODULE))
+#define CONFIG_IGB_PTP
+#else
+#error Cannot enable PTP Hardware Clock due to insufficient kernel support
+#endif
+#endif /* IGB_PTP */
 
 /*****************************************************************************/
 

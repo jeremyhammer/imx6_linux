@@ -33,7 +33,7 @@ FAMILYH = e1000_82575.h e1000_i210.h
 # core driver files
 CFILES = igb_main.c $(FAMILYC) e1000_mac.c e1000_nvm.c e1000_phy.c \
 	 e1000_manage.c igb_param.c igb_ethtool.c kcompat.c e1000_api.c \
-	 e1000_mbx.c igb_vmdq.c igb_sysfs.c igb_procfs.c
+	 e1000_mbx.c igb_vmdq.c igb_sysfs.c igb_procfs.c igb_ptp.c
 HFILES = igb.h e1000_hw.h e1000_osdep.h e1000_defines.h e1000_mac.h \
 	 e1000_nvm.h e1000_manage.h $(FAMILYH) kcompat.h e1000_regs.h \
 	 e1000_api.h igb_regtest.h e1000_mbx.h igb_vmdq.h
@@ -146,9 +146,21 @@ EXTRA_CFLAGS += -DDRIVER_$(shell echo $(DRIVER_NAME) | tr '[a-z]' '[A-Z]')
 EXTRA_CFLAGS += -DDRIVER_NAME=$(DRIVER_NAME)
 EXTRA_CFLAGS += -DDRIVER_NAME_CAPS=$(shell echo $(DRIVER_NAME) | tr '[a-z]' '[A-Z]')
 # standard flags for module builds
-EXTRA_CFLAGS += -DLINUX -D__KERNEL__ -O2 -pipe -Wall
+EXTRA_CFLAGS += -DLINUX -D__KERNEL__ -DMODULE -O2 -pipe -Wall
 EXTRA_CFLAGS += -I$(KSRC)/include -I.
+EXTRA_CFLAGS += $(shell [ -f $(KSRC)/include/linux/modversions.h ] && \
+            echo "-DMODVERSIONS -DEXPORT_SYMTAB \
+                  -include $(KSRC)/include/linux/modversions.h")
+
 EXTRA_CFLAGS += $(CFLAGS_EXTRA)
+
+RHC := $(KSRC)/include/linux/rhconfig.h
+ifneq (,$(wildcard $(RHC)))
+  # 7.3 typo in rhconfig.h
+  ifneq (,$(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(RHC) | grep __module__bigmem))
+	EXTRA_CFLAGS += -D__module_bigmem
+  endif
+endif
 
 # get the kernel version - we use this to find the correct install path
 KVER := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(VERSION_FILE) | grep UTS_RELEASE | \
@@ -215,16 +227,20 @@ ifeq (1,$(shell [ $(KVER_CODE) -ge 132352 ] && echo 1 || echo 0))
 # Makefile for 2.5.x and newer kernel
 TARGET = $(DRIVER_NAME).ko
 
+# man page
+MANSECTION = 7
+MANFILE = $(TARGET:.ko=.$(MANSECTION))
+
 ifneq ($(PATCHLEVEL),)
 EXTRA_CFLAGS += $(CFLAGS_EXTRA)
-obj-y += $(DRIVER_NAME)_builtin.o
-$(DRIVER_NAME)_builtin-objs := $(CFILES:.c=.o)
+obj-m += $(DRIVER_NAME).o
+$(DRIVER_NAME)-objs := $(CFILES:.c=.o)
 else
 default:
 ifeq ($(KOBJ),$(KSRC))
-	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd)
+	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd) modules
 else
-	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd)
+	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) modules
 endif
 endif
 
@@ -232,6 +248,10 @@ else # ifeq (1,$(shell [ $(KVER_CODE) -ge 132352 ] && echo 1 || echo 0))
 
 # Makefile for 2.4.x kernel
 TARGET = $(DRIVER_NAME).o
+
+# man page
+MANSECTION = 7
+MANFILE = $(TARGET:.o=.$(MANSECTION))
 
 # Get rid of compile warnings in kernel header files from SuSE
 ifneq (,$(wildcard /etc/SuSE-release))
@@ -290,7 +310,10 @@ DEPVER := $(shell /sbin/depmod -V 2>/dev/null | \
 ###########################################################################
 # Build rules
 
-install: default
+$(MANFILE).gz: ../$(MANFILE)
+	gzip -c $< > $@
+
+install: default $(MANFILE).gz
 	# remove all old versions of the driver
 	find $(INSTALL_MOD_PATH)/lib/modules/$(KVER) -name $(TARGET) -exec rm -f {} \; || true
 	find $(INSTALL_MOD_PATH)/lib/modules/$(KVER) -name $(TARGET).gz -exec rm -f {} \; || true
@@ -304,14 +327,20 @@ else
 	/sbin/depmod -b $(INSTALL_MOD_PATH) -a -n $(KVERSION) > /dev/null || true
   endif
 endif
+	install -D -m 644 $(MANFILE).gz $(INSTALL_MOD_PATH)$(MANDIR)/man$(MANSECTION)/$(MANFILE).gz
+	man -c -P'cat > /dev/null' $(MANFILE:.$(MANSECTION)=) || true
 
 uninstall:
 	if [ -e $(INSTDIR)/$(TARGET) ] ; then \
 	    rm -f $(INSTDIR)/$(TARGET) ; \
 	fi
 	/sbin/depmod -a
+	if [ -e $(MANDIR)/man$(MANSECTION)/$(MANFILE).gz ] ; then \
+		rm -f $(MANDIR)/man$(MANSECTION)/$(MANFILE).gz ; \
+	fi
 
 .PHONY: clean install
 
 clean:
-	rm -rf $(TARGET) $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o)
+	rm -rf $(TARGET) $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) \
+	$(MANFILE).gz .*cmd .tmp_versions Module.markers Module.symvers modules.order

@@ -65,7 +65,7 @@ struct e1000_hw;
 #define E1000_DEV_ID_I210_FIBER			0x1536
 #define E1000_DEV_ID_I210_SERDES		0x1537
 #define E1000_DEV_ID_I210_SGMII			0x1538
-#define E1000_DEV_ID_I211_COPPER		0x1532
+#define E1000_DEV_ID_I211_COPPER		0x1539
 #define E1000_DEV_ID_DH89XXCC_SGMII		0x0438
 #define E1000_DEV_ID_DH89XXCC_SERDES		0x043A
 #define E1000_DEV_ID_DH89XXCC_BACKPLANE		0x043C
@@ -739,6 +739,7 @@ struct e1000_dev_spec_82575 {
 	bool eee_disable;
 	bool module_plugged;
 	u32 mtu;
+	struct sfp_e1000_flags eth_flags;
 };
 
 struct e1000_dev_spec_vf {

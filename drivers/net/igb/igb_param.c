@@ -330,7 +330,7 @@ void __devinit igb_check_options(struct igb_adapter *adapter)
 			case 0:
 				DPRINTK(PROBE, INFO, "%s turned off\n",
 				        opt.name);
-				if(hw->mac.type >= e1000_i350)
+				if (hw->mac.type >= e1000_i350)
 					adapter->dmac = IGB_DMAC_DISABLE;
 				adapter->rx_itr_setting = itr;
 				break;
@@ -792,52 +792,6 @@ void __devinit igb_check_options(struct igb_adapter *adapter)
 #endif
 	}
 #endif /* IGB_NO_LRO */
-	{ /* Node assignment */
-		static struct igb_option opt = {
-			.type = range_option,
-			.name = "Node to start on",
-			.err  = "defaulting to -1",
-#ifdef HAVE_EARLY_VMALLOC_NODE
-			.def  = 0,
-#else
-			.def  = -1,
-#endif
-			.arg  = { .r = { .min = 0,
-					 .max = (MAX_NUMNODES - 1)}}
-		};
-		int node_param = opt.def;
-
-		/* if the default was zero then we need to set the
-		 * default value to an online node, which is not
-		 * necessarily zero, and the constant initializer
-		 * above can't take first_online_node */
-		if (node_param == 0)
-			/* must set opt.def for validate */
-			opt.def = node_param = first_online_node;
-
-#ifdef module_param_array
-		if (num_Node > bd) {
-#endif
-			node_param = Node[bd];
-			igb_validate_option((uint *)&node_param, &opt, adapter);
-
-			if (node_param != OPTION_UNSET) {
-				DPRINTK(PROBE, INFO, "node set to %d\n", node_param);
-			}
-#ifdef module_param_array
-		}
-#endif
-
-		/* check sanity of the value */
-		if (node_param != -1 && !node_online(node_param)) {
-			DPRINTK(PROBE, INFO,
-			        "ignoring node set to invalid value %d\n",
-			        node_param);
-			node_param = opt.def;
-		}
-
-		adapter->node = node_param;
-	}
 	{ /* MDD - Enable Malicious Driver Detection. Only available when
 	     SR-IOV is enabled. */
 		struct igb_option opt = {

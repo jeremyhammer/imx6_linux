@@ -49,8 +49,10 @@
 #define E1000_FCAL	0x00028  /* Flow Control Address Low - RW */
 #define E1000_FCAH	0x0002C  /* Flow Control Address High -RW */
 #define E1000_FEXT	0x0002C  /* Future Extended - RW */
-#define E1000_FEXTNVM4	0x00024  /* Future Extended NVM 4 - RW */
 #define E1000_FEXTNVM	0x00028  /* Future Extended NVM - RW */
+#define E1000_FEXTNVM2	0x00030  /* Future Extended NVM 2 - RW */
+#define E1000_FEXTNVM3	0x0003C  /* Future Extended NVM 3 - RW */
+#define E1000_FEXTNVM4	0x00024  /* Future Extended NVM 4 - RW */
 #define E1000_FCT	0x00030  /* Flow Control Type - RW */
 #define E1000_CONNSW	0x00034  /* Copper/Fiber switch control - RW */
 #define E1000_VET	0x00038  /* VLAN Ether Type - RW */
@@ -560,6 +562,8 @@
 #define E1000_TIMINCA	0x0B608 /* Increment attributes register - RW */
 #define E1000_TSAUXC	0x0B640 /* Timesync Auxiliary Control register */
 #define E1000_SYSTIMR	0x0B6F8 /* System time register Residue */
+#define E1000_TSICR	0x0B66C /* Interrupt Cause Register */
+#define E1000_TSIM	0x0B674 /* Interrupt Mask Register */
 
 /* Filtering Registers */
 #define E1000_SAQF(_n)	(0x05980 + (4 * (_n))) /* Source Address Queue Fltr */

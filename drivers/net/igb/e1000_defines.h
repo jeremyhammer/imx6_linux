@@ -737,6 +737,7 @@
 #define E1000_ICR_ACK		0x00020000 /* Receive Ack frame */
 #define E1000_ICR_MNG		0x00040000 /* Manageability event */
 #define E1000_ICR_DOCK		0x00080000 /* Dock/Undock */
+#define E1000_ICR_TS		0x00080000 /* Time Sync Interrupt */
 #define E1000_ICR_DRSTA		0x40000000 /* Device Reset Asserted */
 /* If this bit asserted, the driver should claim the interrupt */
 #define E1000_ICR_INT_ASSERTED	0x80000000
@@ -825,6 +826,7 @@
 #define E1000_IMS_ACK		E1000_ICR_ACK     /* Receive Ack frame */
 #define E1000_IMS_MNG		E1000_ICR_MNG     /* Manageability event */
 #define E1000_IMS_DOCK		E1000_ICR_DOCK    /* Dock/Undock */
+#define E1000_IMS_TS		E1000_ICR_TS      /* Time Sync Interrupt */
 #define E1000_IMS_DRSTA		E1000_ICR_DRSTA   /* Device Reset Asserted */
 /* Q0 Rx desc FIFO parity error */
 #define E1000_IMS_RXD_FIFO_PAR0	E1000_ICR_RXD_FIFO_PAR0
@@ -1042,6 +1044,9 @@
 #define E1000_TSYNCRXCFG_PTP_V2_MANAGEMENT_MESSAGE	0x0D00
 
 #define E1000_TIMINCA_16NS_SHIFT	24
+
+#define E1000_TSICR_TXTS		0x00000002
+#define E1000_TSIM_TXTS			0x00000002
 /* TUPLE Filtering Configuration */
 #define E1000_TTQF_DISABLE_MASK		0xF0008000 /* TTQF Disable Mask */
 #define E1000_TTQF_QUEUE_ENABLE		0x100   /* TTQF Queue Enable Bit */
@@ -1082,7 +1087,7 @@
 #define E1000_EEER_EEE_NEG		0x20000000 /* EEE capability nego */
 #define E1000_EEER_RX_LPI_STATUS	0x40000000 /* Rx in LPI state */
 #define E1000_EEER_TX_LPI_STATUS	0x80000000 /* Tx in LPI state */
-
+#define E1000_EEE_SU_LPI_CLK_STP	0x00800000 /* EEE LPI Clock Stop */
 /* PCI Express Control */
 #define E1000_GCR_RXD_NO_SNOOP		0x00000001
 #define E1000_GCR_RXDSCW_NO_SNOOP	0x00000002
@@ -1284,6 +1289,15 @@
 #define NVM_ETRACK_WORD			0x0042
 #define NVM_COMB_VER_OFF		0x0083
 #define NVM_COMB_VER_PTR		0x003d
+
+/* NVM version defines */
+#define NVM_MAJOR_MASK			0xF000
+#define NVM_MINOR_MASK			0x000F
+#define NVM_COMB_VER_MASK		0x00FF
+#define NVM_MAJOR_SHIFT			12
+#define NVM_COMB_VER_SHFT		8
+#define NVM_VER_INVALID			0xFFFF
+#define NVM_ETRACK_SHIFT		16
 
 #define NVM_MAC_ADDR			0x0000
 #define NVM_SUB_DEV_ID			0x000B
@@ -1728,6 +1742,7 @@
 /* Lx power decision based on DMA coal */
 #define E1000_PCIEMISC_LX_DECISION	0x00000080
 
+#define E1000_RXPBS_CFG_TS_EN		0x80000000 /* Timestamp in Rx buffer */
 #define E1000_RXPBS_SIZE_I210_MASK	0x0000003F /* Rx packet buffer size */
 #define E1000_TXPB0S_SIZE_I210_MASK	0x0000003F /* Tx packet buffer 0 size */
 

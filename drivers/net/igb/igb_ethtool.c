@@ -157,9 +157,9 @@ static int igb_get_settings(struct net_device *netdev, struct ethtool_cmd *ecmd)
 				   SUPPORTED_100baseT_Full |
 				   SUPPORTED_1000baseT_Full|
 				   SUPPORTED_Autoneg |
-				   SUPPORTED_TP);
-		ecmd->advertising = (ADVERTISED_TP |
-				     ADVERTISED_Pause);
+				   SUPPORTED_TP |
+				   SUPPORTED_Pause);
+		ecmd->advertising = ADVERTISED_TP;
 
 		if (hw->mac.autoneg == 1) {
 			ecmd->advertising |= ADVERTISED_Autoneg;
@@ -167,22 +167,41 @@ static int igb_get_settings(struct net_device *netdev, struct ethtool_cmd *ecmd)
 			ecmd->advertising |= hw->phy.autoneg_advertised;
 		}
 
+		if (hw->mac.autoneg != 1)
+			ecmd->advertising &= ~(ADVERTISED_Pause |
+					       ADVERTISED_Asym_Pause);
+
+		if (hw->fc.requested_mode == e1000_fc_full)
+			ecmd->advertising |= ADVERTISED_Pause;
+		else if (hw->fc.requested_mode == e1000_fc_rx_pause)
+			ecmd->advertising |= (ADVERTISED_Pause |
+					      ADVERTISED_Asym_Pause);
+		else if (hw->fc.requested_mode == e1000_fc_tx_pause)
+			ecmd->advertising |=  ADVERTISED_Asym_Pause;
+		else
+			ecmd->advertising &= ~(ADVERTISED_Pause |
+					       ADVERTISED_Asym_Pause);
+
 		ecmd->port = PORT_TP;
 		ecmd->phy_address = hw->phy.addr;
+		ecmd->transceiver = XCVR_INTERNAL;
+
 	} else {
 		ecmd->supported   = (SUPPORTED_1000baseT_Full |
+				     SUPPORTED_100baseT_Full |
 				     SUPPORTED_FIBRE |
-				     SUPPORTED_Autoneg);
+				     SUPPORTED_Autoneg |
+				     SUPPORTED_Pause);
 
 		ecmd->advertising = (ADVERTISED_1000baseT_Full |
+				     ADVERTISED_100baseT_Full |
 				     ADVERTISED_FIBRE |
 				     ADVERTISED_Autoneg |
 				     ADVERTISED_Pause);
 
 		ecmd->port = PORT_FIBRE;
+		ecmd->transceiver = XCVR_EXTERNAL;
 	} 
-
-	ecmd->transceiver = XCVR_INTERNAL;
 
 	status = E1000_READ_REG(hw, E1000_STATUS);
 
@@ -206,17 +225,27 @@ static int igb_get_settings(struct net_device *netdev, struct ethtool_cmd *ecmd)
 		ecmd->duplex = -1;
 	}
 
-	ecmd->autoneg = hw->mac.autoneg ? AUTONEG_ENABLE : AUTONEG_DISABLE;
+	if ((hw->phy.media_type == e1000_media_type_fiber) ||
+	    hw->mac.autoneg)
+		ecmd->autoneg = AUTONEG_ENABLE;
+	else
+		ecmd->autoneg = AUTONEG_DISABLE;
 #ifdef ETH_TP_MDI_X
 
 	/* MDI-X => 2; MDI =>1; Invalid =>0 */
-	if ((hw->phy.media_type == e1000_media_type_copper) &&
-	    netif_carrier_ok(netdev))
-	    	ecmd->eth_tp_mdix = hw->phy.is_mdix ? ETH_TP_MDI_X :
-		                                      ETH_TP_MDI;
+	if (hw->phy.media_type == e1000_media_type_copper)
+		ecmd->eth_tp_mdix = hw->phy.is_mdix ? ETH_TP_MDI_X :
+						      ETH_TP_MDI;
 	else
 		ecmd->eth_tp_mdix = ETH_TP_MDI_INVALID;
 
+#ifdef ETH_TP_MDI_AUTO
+	if (hw->phy.mdix == AUTO_ALL_MODES)
+		ecmd->eth_tp_mdix_ctrl = ETH_TP_MDI_AUTO;
+	else
+		ecmd->eth_tp_mdix_ctrl = hw->phy.mdix;
+
+#endif
 #endif /* ETH_TP_MDI_X */
 	return 0;
 }
@@ -234,14 +263,38 @@ static int igb_set_settings(struct net_device *netdev, struct ethtool_cmd *ecmd)
 		return -EINVAL;
 	}
 
+#ifdef ETH_TP_MDI_AUTO
+	/*
+	 * MDI setting is only allowed when autoneg enabled because
+	 * some hardware doesn't allow MDI setting when speed or
+	 * duplex is forced.
+	 */
+	if (ecmd->eth_tp_mdix_ctrl) {
+		if (hw->phy.media_type != e1000_media_type_copper)
+			return -EOPNOTSUPP;
+
+		if ((ecmd->eth_tp_mdix_ctrl != ETH_TP_MDI_AUTO) &&
+		    (ecmd->autoneg != AUTONEG_ENABLE)) {
+			dev_err(&adapter->pdev->dev, "forcing MDI/MDI-X state is not supported when link speed and/or duplex are forced\n");
+			return -EINVAL;
+		}
+	}
+
+#endif /* ETH_TP_MDI_AUTO */
 	while (test_and_set_bit(__IGB_RESETTING, &adapter->state))
 		usleep_range(1000, 2000);
 
 	if (ecmd->autoneg == AUTONEG_ENABLE) {
 		hw->mac.autoneg = 1;
-		hw->phy.autoneg_advertised = ecmd->advertising |
-					     ADVERTISED_TP |
-					     ADVERTISED_Autoneg;
+		if (hw->phy.media_type == e1000_media_type_fiber)
+			hw->phy.autoneg_advertised = ADVERTISED_1000baseT_Full |
+						     ADVERTISED_100baseT_Full |
+						     ADVERTISED_FIBRE |
+						     ADVERTISED_Autoneg;
+		else
+			hw->phy.autoneg_advertised = ecmd->advertising |
+						     ADVERTISED_TP |
+						     ADVERTISED_Autoneg;
 		ecmd->advertising = hw->phy.autoneg_advertised;
 		if (adapter->fc_autoneg)
 			hw->fc.requested_mode = e1000_fc_default;
@@ -2054,6 +2107,57 @@ static void igb_get_strings(struct net_device *netdev, u32 stringset, u8 *data)
 	}
 }
 
+#ifdef HAVE_ETHTOOL_GET_TS_INFO
+static int igb_get_ts_info(struct net_device *dev,
+				   struct ethtool_ts_info *info)
+{
+	struct igb_adapter *adapter = netdev_priv(dev);
+
+	switch (adapter->hw.mac.type) {
+#ifdef CONFIG_IGB_PTP
+	case e1000_82576:
+	case e1000_82580:
+	case e1000_i350:
+	case e1000_i210:
+	case e1000_i211:
+		info->so_timestamping =
+			SOF_TIMESTAMPING_TX_HARDWARE |
+			SOF_TIMESTAMPING_RX_HARDWARE |
+			SOF_TIMESTAMPING_RAW_HARDWARE;
+
+		if (adapter->ptp_clock)
+			info->phc_index = ptp_clock_index(adapter->ptp_clock);
+		else
+			info->phc_index = -1;
+
+		info->tx_types =
+			(1 << HWTSTAMP_TX_OFF) |
+			(1 << HWTSTAMP_TX_ON);
+
+		info->rx_filters = 1 << HWTSTAMP_FILTER_NONE;
+
+		/* 82576 does not support timestamping all packets. */
+		if (adapter->hw.mac.type >= e1000_82580)
+			info->rx_filters |= 1 << HWTSTAMP_FILTER_ALL;
+		else
+			info->rx_filters |=
+				(1 << HWTSTAMP_FILTER_PTP_V1_L4_SYNC) |
+				(1 << HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ) |
+				(1 << HWTSTAMP_FILTER_PTP_V2_SYNC) |
+				(1 << HWTSTAMP_FILTER_PTP_V2_DELAY_REQ) |
+				(1 << HWTSTAMP_FILTER_PTP_V2_EVENT);
+
+		break;
+#endif /* CONFIG_IGB_PTP */
+	default:
+		return ethtool_op_get_ts_info(dev, info);
+		break;
+	}
+
+	return 0;
+}
+#endif /* HAVE_ETHTOOL_GET_TS_INFO */
+
 #ifdef CONFIG_PM_RUNTIME
 static int igb_ethtool_begin(struct net_device *netdev)
 {
@@ -2306,6 +2410,9 @@ static struct ethtool_ops igb_ethtool_ops = {
 #endif
 	.get_coalesce           = igb_get_coalesce,
 	.set_coalesce           = igb_set_coalesce,
+#ifdef HAVE_ETHTOOL_GET_TS_INFO
+	.get_ts_info            = igb_get_ts_info,
+#endif /* HAVE_ETHTOOL_GET_TS_INFO */
 #ifdef CONFIG_PM_RUNTIME
 	.begin			= igb_ethtool_begin,
 	.complete		= igb_ethtool_complete,
