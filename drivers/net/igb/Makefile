@@ -48,14 +48,7 @@ DRIVER_NAME=igb
 
 # Kernel Search Path
 # All the places we look for kernel source
-KSP :=  /lib/modules/$(BUILD_KERNEL)/build \
-        /lib/modules/$(BUILD_KERNEL)/source \
-        /usr/src/linux-$(BUILD_KERNEL) \
-        /usr/src/linux-$($(BUILD_KERNEL) | sed 's/-.*//') \
-        /usr/src/kernel-headers-$(BUILD_KERNEL) \
-        /usr/src/kernel-source-$(BUILD_KERNEL) \
-        /usr/src/linux-$($(BUILD_KERNEL) | sed 's/\([0-9]*\.[0-9]*\)\..*/\1/') \
-        /usr/src/linux
+KSP :=  .
 
 # prune the list down to only values that exist
 # and have an include/linux sub-directory
