@@ -83,7 +83,6 @@
 #define MX6Q_SABRELITE_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
 #define MX6Q_CETON_HERA_USB_PWR_EN  IMX_GPIO_NR(3, 31)
 #define MX6Q_SABRELITE_CAP_TCH_INT1	IMX_GPIO_NR(1, 9)
-#define MX6Q_SABRELITE_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
 #define MX6Q_SABRELITE_CAN1_STBY	IMX_GPIO_NR(1, 2)
 #define MX6Q_SABRELITE_CAN1_EN		IMX_GPIO_NR(1, 4)
 #define MX6Q_SABRELITE_ONOFF_KEY	IMX_GPIO_NR(2, 3)
@@ -236,6 +235,10 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
     MX6Q_PAD_GPIO_16__GPIO_7_11,     /* GPIO7[11] - PCIe rstn */
 	MX6Q_PAD_GPIO_17__SPDIF_OUT1,
 
+    MX6Q_PAD_DISP0_DAT9__GPIO_4_30, //MSP430 INT
+    MX6Q_PAD_DISP0_DAT12__GPIO_5_6, //MSP430 TDIO
+    MX6Q_PAD_DISP0_DAT14__GPIO_5_8, //MSP430 TCK
+
 	/* GPIO4 */
 	MX6Q_PAD_GPIO_19__GPIO_4_5,	/* J14 - Volume Down */
 
@@ -247,7 +250,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_EIM_A23__GPIO_6_6,	/* J12 - Boot Mode Select */
 
 	/* GPIO7 */
-	MX6Q_PAD_GPIO_17__GPIO_7_12,	/* USB Hub Reset */
 	MX6Q_PAD_GPIO_18__GPIO_7_13,	/* J14 - Volume Up */
 
 	/* I2C1, SGTL5000 */
@@ -257,39 +259,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	/* I2C2 Camera, MIPI, HDMI */
 	MX6Q_PAD_KEY_COL3__I2C2_SCL,	/* GPIO4[12] */
 	MX6Q_PAD_KEY_ROW3__I2C2_SDA,	/* GPIO4[13] */
-
-	/* DISPLAY */
-	MX6Q_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,
-	MX6Q_PAD_DI0_PIN15__IPU1_DI0_PIN15,		/* DE */
-	MX6Q_PAD_DI0_PIN2__IPU1_DI0_PIN2,		/* HSync */
-	MX6Q_PAD_DI0_PIN3__IPU1_DI0_PIN3,		/* VSync */
-	MX6Q_PAD_DI0_PIN4__IPU1_DI0_PIN4,		/* Contrast */
-	MX6Q_PAD_DISP0_DAT0__IPU1_DISP0_DAT_0,
-	MX6Q_PAD_DISP0_DAT1__IPU1_DISP0_DAT_1,
-	MX6Q_PAD_DISP0_DAT2__IPU1_DISP0_DAT_2,
-	MX6Q_PAD_DISP0_DAT3__IPU1_DISP0_DAT_3,
-	MX6Q_PAD_DISP0_DAT4__IPU1_DISP0_DAT_4,
-	MX6Q_PAD_DISP0_DAT5__IPU1_DISP0_DAT_5,
-	MX6Q_PAD_DISP0_DAT6__IPU1_DISP0_DAT_6,
-	MX6Q_PAD_DISP0_DAT7__IPU1_DISP0_DAT_7,
-	MX6Q_PAD_DISP0_DAT8__IPU1_DISP0_DAT_8,
-	MX6Q_PAD_DISP0_DAT9__IPU1_DISP0_DAT_9,
-	MX6Q_PAD_DISP0_DAT10__IPU1_DISP0_DAT_10,
-	MX6Q_PAD_DISP0_DAT11__IPU1_DISP0_DAT_11,
-	MX6Q_PAD_DISP0_DAT12__IPU1_DISP0_DAT_12,
-	MX6Q_PAD_DISP0_DAT13__IPU1_DISP0_DAT_13,
-	MX6Q_PAD_DISP0_DAT14__IPU1_DISP0_DAT_14,
-	MX6Q_PAD_DISP0_DAT15__IPU1_DISP0_DAT_15,
-	MX6Q_PAD_DISP0_DAT16__IPU1_DISP0_DAT_16,
-	MX6Q_PAD_DISP0_DAT17__IPU1_DISP0_DAT_17,
-	MX6Q_PAD_DISP0_DAT18__IPU1_DISP0_DAT_18,
-	MX6Q_PAD_DISP0_DAT19__IPU1_DISP0_DAT_19,
-	MX6Q_PAD_DISP0_DAT20__IPU1_DISP0_DAT_20,
-	MX6Q_PAD_DISP0_DAT21__IPU1_DISP0_DAT_21,
-	MX6Q_PAD_DISP0_DAT22__IPU1_DISP0_DAT_22,
-	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
-	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* J7 - Display Connector GP */
-	MX6Q_PAD_GPIO_9__GPIO_1_9,		/* J7 - Display Connector GP */
 
 	/* PWM1 */
 	MX6Q_PAD_SD1_DAT3__PWM1_PWMO,		/* GPIO1[21] */
@@ -1033,6 +1002,10 @@ static const struct imx_pcie_platform_data mx6_ceton_hera_pcie_data __initconst 
 	.pcie_dis	= CETON_HERA_PCIE_DIS_B,
 };
 
+static struct platform_device ceton_hera_msp430_updater_device = {
+	.name = "msp430_updater",
+};
+
 /*!
  * Board specific initialization.
  */
@@ -1092,7 +1065,7 @@ static void __init mx6_ceton_hera_board_init(void)
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
 	imx6q_add_anatop_thermal_imx(1, &mx6q_sabrelite_anatop_thermal_data);
-	imx6_init_fec(fec_data);
+	//imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &mx6q_sabrelite_pm_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6q_sabrelite_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
@@ -1104,9 +1077,6 @@ static void __init mx6_ceton_hera_board_init(void)
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
-
-	/* release USB Hub reset */
-	gpio_set_value(MX6Q_SABRELITE_USB_HUB_RESET, 1);
 
 	imx6q_add_mxc_pwm(0);
 	imx6q_add_mxc_pwm(1);
@@ -1151,6 +1121,8 @@ static void __init mx6_ceton_hera_board_init(void)
 	imx6q_add_busfreq();
 
 	imx6q_add_pcie(&mx6_ceton_hera_pcie_data);
+
+	mxc_register_device(&ceton_hera_msp430_updater_device, NULL);
 }
 
 extern void __iomem *twd_base;
