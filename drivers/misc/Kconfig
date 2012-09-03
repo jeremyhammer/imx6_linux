@@ -20,6 +20,14 @@ menuconfig MISC_DEVICES
 
 if MISC_DEVICES
 
+config MSP430_UPDATER
+    tristate "Ceton MSP430 Updater"
+    help
+      Ceton MSP430 Updater
+
+	  This driver can also be built as a module.  If so, the module
+	  will be called msp430_updater.
+
 config AD525X_DPOT
 	tristate "Analog Devices Digital Potentiometers"
 	depends on (I2C || SPI) && SYSFS
